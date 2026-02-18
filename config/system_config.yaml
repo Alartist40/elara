@@ -1,0 +1,86 @@
+system:
+  name: "Elara"
+  version: "2.0"
+  log_level: "INFO"
+  max_memory_mb: 4096
+
+input:
+  tokenizer_path: "mistralai/Mistral-7B-Instruct-v0.3"
+  vision_args:
+    hidden_size: 1024
+    num_channels: 3
+    image_size: 336
+    patch_size: 14
+
+constitutional:
+  principles_path: "config/biblical_principles.yaml"
+  audit_log_path: "logs/constitution.log"
+  strict_mode: true
+  watermark_synthetic_voice: true
+
+voice:
+  stt:
+    model: "base"
+    language: "en"
+    device: "auto"
+  tts:
+    engine: "nemo"
+    fastpitch_model: "tts_en_fastpitch"
+    hifigan_model: "tts_hifigan"
+    default_speaker: 0
+    sample_rate: 22050
+    pace: 1.0
+  vad:
+    enabled: true
+    threshold: 0.5
+    min_speech_duration_ms: 250
+
+clara:
+  store_path: "data/clara_store"
+  n_memory_tokens: 16
+  compression_rate: 16
+  top_k_retrieve: 5
+  mmap_enabled: true
+  max_store_size_gb: 10
+
+trm:
+  n_layers: 2
+  n_recursions: 6
+  confidence_threshold: 0.85
+  early_halt: true
+  max_latent_dim: 512
+
+tidar:
+  block_size: 8
+  beta: 0.5
+  temperature: 0.8
+  top_p: 0.9
+
+tools:
+  enabled: true
+  schema_path: "config/tool_schema.json"
+  max_iterations: 3
+  timeout_seconds: 30
+  allowed_tools:
+    - "search"
+    - "calculator"
+    - "vision_analyze"
+  sandboxed_execution: true
+
+tiering:
+  thresholds:
+    tier_2_complexity: 0.5
+    tier_3_complexity: 0.8
+    confidence_low: 0.3
+    voice_query_boost: 1
+  force_tier: null
+
+models:
+  mistral:
+    name: "mistralai/Mistral-7B-Instruct-v0.3"
+    dtype: "fp16"
+    device: "cuda"
+  fallback:
+    enabled: true
+    airllm_path: "models/airllm_shards"
+    trigger_memory_mb: 3500

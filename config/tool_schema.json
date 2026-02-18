@@ -1,0 +1,57 @@
+{
+    "version": "1.0",
+    "tools": [
+        {
+            "name": "search",
+            "description": "Search the web for information.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The search query."
+                    }
+                },
+                "required": [
+                    "query"
+                ]
+            }
+        },
+        {
+            "name": "calculator",
+            "description": "Evaluate a mathematical expression.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "expression": {
+                        "type": "string",
+                        "description": "The mathematical expression to evaluate."
+                    }
+                },
+                "required": [
+                    "expression"
+                ]
+            }
+        },
+        {
+            "name": "vision_analyze",
+            "description": "Perform detailed analysis on an image.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "image_path": {
+                        "type": "string",
+                        "description": "Path to the image file."
+                    },
+                    "question": {
+                        "type": "string",
+                        "description": "Question about the image."
+                    }
+                },
+                "required": [
+                    "image_path"
+                ]
+            }
+        }
+    ]
+}
