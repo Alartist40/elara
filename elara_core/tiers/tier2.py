@@ -96,7 +96,16 @@ class Tier2Engine:
 
     def generate(self, query: str, max_tokens: int = 512) -> str:
         if self.generator is None:
-            return "Error: No generator set for Tier 2."
+            docs = self.retrieve(query, k=3)
+            if not docs:
+                return "Error: No generator available and no documents retrieved."
+
+            return f"""Retrieved documents (no generator to synthesize answer):
+
+{chr(10).join(f"{i+1}. {d[:200]}..." for i, d in enumerate(docs))}
+
+Query: {query}
+[Connect Tier 1 engine to synthesize answers]"""
 
         # Retrieve context
         docs = self.retrieve(query, k=3)
