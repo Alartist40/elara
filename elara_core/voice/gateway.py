@@ -62,4 +62,5 @@ class VoiceGateway:
             "tts_loaded": self.tts is not None,
             "stt_model": self.stt_model_size,
             "device": self.device,
+            "tts_use_nemo": self.tts_use_nemo,
         }

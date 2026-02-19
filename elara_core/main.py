@@ -5,6 +5,8 @@ Elara CLI - Simplified Multi-Tier AI System.
 import argparse
 import sys
 import os
+import logging
+
 def main():
     from dotenv import load_dotenv
     load_dotenv()
@@ -74,12 +76,23 @@ def process_input(user_input, tier1, tier2, tier3, router, safety, tools):
         return scrubbed_input
 
     # 2. Tool routing
-    tool_result = tools.execute(scrubbed_input)
+    try:
+        tool_result = tools.execute(scrubbed_input)
+    except Exception as e:
+        logging.warning(f"Tool execution failed: {e}")
+        tool_result = None
 
     # 3. Build context from tool output if available
     context = ""
     if tool_result and tool_result.success:
-        context = f"Tool result ({tool_result.name}): {tool_result.output}\n\n"
+        # Truncate and clearly delimit tool output to mitigate prompt injection risks
+        MAX_TOOL_OUTPUT = 500
+        safe_output = str(tool_result.output)[:MAX_TOOL_OUTPUT]
+        context = (
+            f"[TOOL RESULT — {tool_result.name}]\n"
+            f"{safe_output}\n"
+            f"[END TOOL RESULT]\n\n"
+        )
 
     # 4. Tier selection
     tier = router.select_tier(scrubbed_input)

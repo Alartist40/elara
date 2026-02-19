@@ -2,6 +2,7 @@ import faiss
 import numpy as np
 from sentence_transformers import SentenceTransformer
 import json
+import logging
 from pathlib import Path
 from typing import List, Optional, Any
 
@@ -96,16 +97,16 @@ class Tier2Engine:
 
     def generate(self, query: str, max_tokens: int = 512) -> str:
         if self.generator is None:
+            logging.warning("Tier2Engine: returning raw documents — no generator available.")
             docs = self.retrieve(query, k=3)
             if not docs:
                 return "Error: No generator available and no documents retrieved."
 
-            return f"""Retrieved documents (no generator to synthesize answer):
-
-{chr(10).join(f"{i+1}. {d[:200]}..." for i, d in enumerate(docs))}
-
-Query: {query}
-[Connect Tier 1 engine to synthesize answers]"""
+            doc_lines = chr(10).join(
+                f"{i+1}. {d[:200]}{'...' if len(d) > 200 else ''}"
+                for i, d in enumerate(docs)
+            )
+            return f"Retrieved documents (no generator available):\n\n{doc_lines}\n\nQuery: {query}"
 
         # Retrieve context
         docs = self.retrieve(query, k=3)
