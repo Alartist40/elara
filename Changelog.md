@@ -2,6 +2,30 @@
 
 All notable changes to the Elara project will be documented in this file.
 
+## [2.1.0-functional] - 2026-02-25
+
+### Added
+- **Architecture Reset**: Replaced complex research-based modules (CLaRa, TRM, TiDAR) with functional, battle-tested components.
+- **New Tiered System**:
+  - **Tier 1**: Gemma 3 1B via `llama-cpp-python` for fast, local inference.
+  - **Tier 2**: FAISS-based RAG with `SentenceTransformers` for document-augmented generation.
+  - **Tier 3**: API fallback support (OpenRouter) for high-complexity queries.
+- **Safety Layer**: Simplified rule-based `SafetyFilter` replacing the old Constitutional Layer.
+- **Voice Fallback**: Added `pyttsx3` as an offline, low-resource TTS fallback.
+- **Tooling**:
+  - `scripts/build_index.py`: Tool for building FAISS indices from text documents.
+  - `scripts/download_models.sh`: One-click setup for required model weights.
+  - `scripts/benchmark.py`: Latency measurement tool for different tiers.
+
+### Changed
+- **main.py**: Simplified CLI logic and routing.
+- **Requirements**: Updated to reflect functional dependencies (`llama-cpp-python`, `faiss-cpu`, etc.).
+- **Documentation**: Updated README and Architecture diagrams to match the new functional design.
+
+### Removed
+- Unfunctional/Untrainable research modules: `clara`, `trm`, `tidar`.
+- `airllm_fallback.py` (replaced by Tier 3 API fallback).
+
 ## [2.0.0] - 2026-02-18
 
 ### Added
