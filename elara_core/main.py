@@ -88,8 +88,9 @@ def process_input(user_input, tier1, tier2, tier3, router, safety, tools):
         # Truncate and clearly delimit tool output to mitigate prompt injection risks
         MAX_TOOL_OUTPUT = 500
         safe_output = str(tool_result.output)[:MAX_TOOL_OUTPUT]
+        safe_name = str(tool_result.name)[:64].replace("\n", " ")
         context = (
-            f"[TOOL RESULT — {tool_result.name}]\n"
+            f"[TOOL RESULT — {safe_name}]\n"
             f"{safe_output}\n"
             f"[END TOOL RESULT]\n\n"
         )

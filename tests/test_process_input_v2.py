@@ -32,9 +32,9 @@ class TestProcessInput(unittest.TestCase):
 
         # Verify tool result was used as context with NEW FORMAT
         expected_context = (
-            f"[TOOL RESULT — calculator]\n"
-            f"4\n"
-            f"[END TOOL RESULT]\n\n"
+            "[TOOL RESULT — calculator]\n"
+            "4\n"
+            "[END TOOL RESULT]\n\n"
         )
         self.tier1.generate.assert_called_with(expected_context + "calculate 2+2")
         self.assertEqual(response, "The result is 4.")

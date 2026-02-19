@@ -62,10 +62,10 @@ python3 -m elara_core.main --interactive --voice
 ### Forcing TTS Engine
 ```bash
 # Force NeMo (requires GPU/CUDA)
-python3 -m elara_core.main --voice --tts-nemo
+python3 -m elara_core.main --interactive --voice --tts-nemo
 
 # Force local fallback (pyttsx3)
-python3 -m elara_core.main --voice --tts-cpu
+python3 -m elara_core.main --interactive --voice --tts-cpu
 ```
 
 ### Building the Knowledge Base
