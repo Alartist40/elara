@@ -2,6 +2,19 @@
 
 All notable changes to the Elara project will be documented in this file.
 
+## [2.1.1-patch] - 2026-02-26
+
+### Fixed
+- **Tool Router Logic**: Fixed bug where tool execution caused immediate return. Tool results are now prepended to user input as context for the LLM.
+- **Tier 2 Fallback**: Added better formatting and document truncation when no generator is available in Tier 2.
+- **Voice Gateway**: Fixed GPU/NeMo detection logic to use `torch.cuda.is_available()`.
+
+### Added
+- **CLI Flags**: Added `--tts-nemo` and `--tts-cpu` to `main.py` for manual TTS engine selection.
+
+### Removed
+- Dead code: `ToolCallParser` and associated exports.
+
 ## [2.1.0-functional] - 2026-02-25
 
 ### Added
