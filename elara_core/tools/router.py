@@ -3,6 +3,7 @@ Simplified ToolRouter - Only Calculator implementation.
 """
 
 import time
+import re
 from typing import Dict, Any, List, Optional
 
 class ToolResult:
@@ -20,15 +21,17 @@ class ToolRouter:
         self._implementations = {
             "calculator": self._tool_calculator
         }
+        # Matches digit-adjacent operators for basic math
+        self.math_pattern = re.compile(r'\d\s*[\+\-\*/]\s*\d')
 
     def execute(self, query: str) -> Optional[ToolResult]:
         """
         Simple execution: if 'calculate' or math-like query, try calculator.
         """
-        if "calculate" in query.lower() or any(c in query for c in "+-*/"):
-            # Very naive extraction for demo purposes
-            # In a real app, you'd use regex or the LLM to extract the expression
-            expression = query.lower().replace("calculate", "").strip()
+        lower_query = query.lower()
+        if "calculate" in lower_query or self.math_pattern.search(query):
+            # Extract expression by removing 'calculate' and trimming
+            expression = re.sub(r'(?i)calculate\s*', '', query).strip()
             return self._execute_single("calculator", expression)
         return None
 
@@ -53,6 +56,8 @@ class ToolRouter:
         clean_expr = "".join(c for c in expression if c in allowed_chars)
         if not clean_expr: return "Error: No valid expression"
         try:
+            # Note: eval is dangerous, but we restricted chars.
+            # In production, a math parser like numexpr or simpleeval is better.
             return str(eval(clean_expr, {"__builtins__": {}}, {}))
         except:
             return "Error: Invalid math expression"

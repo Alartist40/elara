@@ -4,7 +4,6 @@
 import argparse
 from pathlib import Path
 from elara_core.tiers.tier2 import Tier2Engine
-from elara_core.tiers.tier1 import Tier1Engine
 
 def main():
     parser = argparse.ArgumentParser()
@@ -17,7 +16,10 @@ def main():
     docs = []
     doc_paths = list(Path(args.documents).glob("*.txt"))
     for path in doc_paths:
-        docs.append(path.read_text())
+        try:
+            docs.append(path.read_text(encoding="utf-8"))
+        except Exception as e:
+            print(f"Error reading {path}: {e}")
 
     if not docs:
         print(f"No .txt files found in {args.documents}")
@@ -26,9 +28,9 @@ def main():
     print(f"Loading {len(docs)} documents...")
 
     # Build index
-    tier1 = Tier1Engine(model_path="")  # Not used for indexing
+    # We pass None as the generator because we only need the encoder for indexing
     tier2 = Tier2Engine(
-        tier1,
+        tier1_engine=None,
         index_path=args.output_index,
         docs_path=args.output_docs
     )

@@ -1,6 +1,5 @@
 import openai
 import os
-from typing import Optional
 
 class Tier3Engine:
     """
@@ -23,18 +22,26 @@ class Tier3Engine:
         else:
             self.client = None
 
+        self.system_prompt = """You are Elara, a helpful AI assistant.
+Be concise, accurate, and helpful. If unsure, say so."""
+
     def generate(self, prompt: str, max_tokens: int = 1024) -> str:
         if not self.client:
             return "Error: Tier 3 API key not set."
 
         try:
+            messages = [
+                {"role": "system", "content": self.system_prompt},
+                {"role": "user", "content": prompt}
+            ]
             response = self.client.chat.completions.create(
                 model=self.model,
-                messages=[{"role": "user", "content": prompt}],
+                messages=messages,
                 max_tokens=max_tokens,
                 temperature=0.7,
             )
-            return response.choices[0].message.content
+            content = response.choices[0].message.content
+            return content if content is not None else ""
         except Exception as e:
             return f"Error in Tier 3 generation: {e}"
 

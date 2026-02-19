@@ -14,8 +14,8 @@ class TestEngines(unittest.TestCase):
         self.assertEqual(engine.get_stats()["status"], "not_loaded")
 
     def test_tier2_init(self):
-        tier1 = Tier1Engine(model_path="")
-        engine = Tier2Engine(tier1, index_path="nonexistent.index", docs_path="nonexistent.json")
+        # generator is optional now
+        engine = Tier2Engine(tier1_engine=None, index_path="nonexistent.index", docs_path="nonexistent.json")
         self.assertEqual(len(engine.documents), 0)
 
     def test_tier3_init(self):
@@ -47,9 +47,25 @@ class TestEngines(unittest.TestCase):
 
     def test_tools(self):
         tr = ToolRouter()
+
+        # Happy path
         res = tr.execute("calculate 2+2")
         self.assertTrue(res.success)
         self.assertEqual(res.output, "4")
+
+        # Floating point math
+        res_float = tr.execute("calculate 10 / 3")
+        self.assertTrue(res_float.success)
+        self.assertTrue(res_float.output.startswith("3.33"))
+
+        # Non-math input with 'calculate'
+        res_garbage = tr.execute("calculate hello")
+        self.assertTrue(res_garbage.success) # It triggers, but fails eval
+        self.assertEqual(res_garbage.output, "Error: No valid expression")
+
+        # Normal text that should NOT trigger calculator
+        res_none = tr.execute("Tell me about state-of-the-art AI")
+        self.assertIsNone(res_none)
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,8 +1,5 @@
 """Simple tier selection. No ML, no complexity."""
 
-import re
-from typing import List
-
 class TierRouter:
     def __init__(self, tier2_engine):
         self.tier2 = tier2_engine

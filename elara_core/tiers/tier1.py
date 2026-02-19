@@ -1,5 +1,6 @@
+import os
 from llama_cpp import Llama
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 class Tier1Engine:
     """
@@ -8,14 +9,22 @@ class Tier1Engine:
     Just a model that works.
     """
 
-    def __init__(self, model_path: str = "models/gemma-3-1b-it-q4_0.gguf"):
+    def __init__(
+        self,
+        model_path: str = "models/gemma-3-1b-it-q4_0.gguf",
+        n_threads: Optional[int] = None
+    ):
+        if n_threads is None:
+            n_threads = os.cpu_count() or 4
+
         # llama-cpp-python handles quantization, GPU offloading
         try:
             self.model = Llama(
                 model_path=model_path,
-                n_ctx=4096,           # Context window
-                n_threads=4,          # CPU threads (adjust to your cores)
+                n_ctx=4096,
+                n_threads=n_threads,
                 n_gpu_layers=0,       # Set to -1 if you have GPU
+                chat_format="gemma",
                 verbose=False,
             )
         except Exception as e:
@@ -29,16 +38,19 @@ Be concise, accurate, and helpful. If unsure, say so."""
         if self.model is None:
             return "Error: Tier 1 model not loaded."
 
-        full_prompt = f"{self.system_prompt}\n\nUser: {prompt}\nAssistant:"
+        messages = [
+            {"role": "system", "content": self.system_prompt},
+            {"role": "user", "content": prompt}
+        ]
 
-        output = self.model(
-            full_prompt,
+        output = self.model.create_chat_completion(
+            messages=messages,
             max_tokens=max_tokens,
             temperature=0.7,
             stop=["User:", "Assistant:"],
         )
 
-        return output["choices"][0]["text"].strip()
+        return output["choices"][0]["message"]["content"].strip()
 
     def get_stats(self) -> Dict[str, Any]:
         if self.model is None:
@@ -48,4 +60,5 @@ Be concise, accurate, and helpful. If unsure, say so."""
             "model": "gemma-3-1b-it-q4_0",
             "ram_mb": self.model.n_ctx * 0.5,  # Rough estimate
             "gpu_layers": self.model.n_gpu_layers,
+            "n_threads": self.model.context_params.n_threads,
         }

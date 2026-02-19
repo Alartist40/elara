@@ -1,6 +1,11 @@
 # Core inference (local models)
 llama-cpp-python>=0.3.0
 
+# ML Framework
+# Note: For ~4GB devices, use CPU-only torch to save space/memory.
+# Install with: pip install torch --index-url https://download.pytorch.org/whl/cpu
+torch>=2.1.0
+
 # Vector search (RAG)
 faiss-cpu>=1.8.0
 sentence-transformers>=3.0.0
@@ -10,7 +15,7 @@ openai>=1.0.0
 
 # Voice
 openai-whisper>=20231117
-# nemo-toolkit[all]>=2.0.0  # Optional, keeping it if available
+# nemo-toolkit[all]>=2.0.0
 pyttsx3>=2.90
 
 # Utilities
@@ -18,5 +23,5 @@ numpy>=1.24.0
 pydantic>=2.0.0
 pyyaml>=6.0
 tqdm>=4.65.0
-python-dotenv>=1.0.0
+python-dotenv>=1.2.0
 soundfile>=0.12.0

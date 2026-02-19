@@ -2,11 +2,10 @@
 TTS Engine with NeMo and pyttsx3 fallback.
 """
 
-import torch
-import numpy as np
 from pathlib import Path
 from typing import Optional, Dict, Any
 import warnings
+import numpy as np
 
 class TTSProvider:
     """Base class for TTS providers."""
@@ -16,11 +15,12 @@ class TTSProvider:
     def synthesize_to_file(self, text: str, output_path: Path, **kwargs) -> None:
         raise NotImplementedError
 
+    def _ensure_loaded(self):
+        pass
+
 class NeMoTTS(TTSProvider):
     """NVIDIA NeMo TTS: FastPitch + HiFi-GAN."""
     def __init__(self, fastpitch_path=None, hifigan_path=None, speaker_id=0, device="auto"):
-        if device == "auto":
-            device = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = device
         self.speaker_id = speaker_id
         self.sample_rate = 22050
@@ -32,7 +32,16 @@ class NeMoTTS(TTSProvider):
 
     def _ensure_loaded(self):
         if self._loaded: return
-        from nemo.collections.tts.models import FastPitchModel, HifiGanModel
+
+        try:
+            import torch
+            from nemo.collections.tts.models import FastPitchModel, HifiGanModel
+        except ImportError:
+            raise ImportError("NeMo or Torch not installed.")
+
+        if self.device == "auto":
+            self.device = "cuda" if torch.cuda.is_available() else "cpu"
+
         if self._fastpitch_path:
             self.fastpitch = FastPitchModel.restore_from(str(self._fastpitch_path)).to(self.device)
         else:
@@ -49,6 +58,7 @@ class NeMoTTS(TTSProvider):
 
     def synthesize(self, text: str, pace: float = 1.0, **kwargs) -> np.ndarray:
         self._ensure_loaded()
+        import torch
         with torch.no_grad():
             parsed = self.fastpitch.parse(text)
             spectrogram = self.fastpitch.generate_spectrogram(tokens=parsed, speaker=self.speaker_id, pace=pace)
@@ -63,15 +73,14 @@ class NeMoTTS(TTSProvider):
 class PyTTSx3(TTSProvider):
     """Offline TTS fallback using pyttsx3."""
     def __init__(self, rate=150):
-        import pyttsx3
-        self.engine = pyttsx3.init()
-        self.engine.setProperty('rate', rate)
+        try:
+            import pyttsx3
+            self.engine = pyttsx3.init()
+            self.engine.setProperty('rate', rate)
+        except ImportError:
+            raise ImportError("pyttsx3 not installed.")
 
     def synthesize(self, text: str, **kwargs) -> np.ndarray:
-        # pyttsx3 doesn't easily return a numpy array directly without saving to file first
-        # For simplicity, we'll return an empty array if not saving to file,
-        # or implement a temporary file read if really needed.
-        # But usually in Elara, it's used with synthesize_to_file for playback.
         warnings.warn("PyTTSx3.synthesize returns empty array. Use synthesize_to_file.")
         return np.zeros(0)
 
@@ -86,15 +95,26 @@ class ElaraTTS:
         if use_nemo:
             try:
                 self.provider = NeMoTTS(**kwargs)
-                # Try to load (optional check)
+                self.provider._ensure_loaded()
             except Exception as e:
                 print(f"Failed to load NeMo TTS, falling back to pyttsx3: {e}")
-                self.provider = PyTTSx3()
+                try:
+                    self.provider = PyTTSx3()
+                except Exception as e2:
+                    print(f"Failed to load pyttsx3 fallback: {e2}")
+                    self.provider = None
         else:
-            self.provider = PyTTSx3()
+            try:
+                self.provider = PyTTSx3()
+            except Exception as e:
+                print(f"Failed to load pyttsx3: {e}")
+                self.provider = None
 
     def synthesize(self, text: str, **kwargs) -> np.ndarray:
-        return self.provider.synthesize(text, **kwargs)
+        if self.provider:
+            return self.provider.synthesize(text, **kwargs)
+        return np.zeros(0)
 
     def synthesize_to_file(self, text: str, output_path: Path, **kwargs) -> None:
-        self.provider.synthesize_to_file(text, output_path, **kwargs)
+        if self.provider:
+            self.provider.synthesize_to_file(text, output_path, **kwargs)
