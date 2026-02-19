@@ -1,0 +1,42 @@
+import openai
+import os
+from typing import Optional
+
+class Tier3Engine:
+    """
+    When local models fail, call the cloud.
+    Not "deep reasoning"—just bigger models.
+    """
+
+    def __init__(self):
+        # Use OpenRouter for cheap access to many models
+        # Or Together AI, or direct OpenAI
+        self.api_key = os.getenv("OPENROUTER_API_KEY")
+        self.base_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+        self.model = os.getenv("TIER3_MODEL", "meta-llama/llama-3.3-70b-instruct")
+
+        if self.api_key:
+            self.client = openai.OpenAI(
+                base_url=self.base_url,
+                api_key=self.api_key,
+            )
+        else:
+            self.client = None
+
+    def generate(self, prompt: str, max_tokens: int = 1024) -> str:
+        if not self.client:
+            return "Error: Tier 3 API key not set."
+
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=max_tokens,
+                temperature=0.7,
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            return f"Error in Tier 3 generation: {e}"
+
+    def is_available(self) -> bool:
+        return self.api_key is not None

@@ -1,21 +1,22 @@
-# Elara v2.0 - Core Dependencies
-torch>=2.0.0
+# Core inference (local models)
+llama-cpp-python>=0.3.0
+
+# Vector search (RAG)
+faiss-cpu>=1.8.0
+sentence-transformers>=3.0.0
+
+# API fallback
+openai>=1.0.0
+
+# Voice
+openai-whisper>=20231117
+# nemo-toolkit[all]>=2.0.0  # Optional, keeping it if available
+pyttsx3>=2.90
+
+# Utilities
 numpy>=1.24.0
-PyYAML>=6.0
-safetensors>=0.3.0
-
-# Voice I/O
+pydantic>=2.0.0
+pyyaml>=6.0
+tqdm>=4.65.0
+python-dotenv>=1.0.0
 soundfile>=0.12.0
-librosa>=0.10.0
-
-# Quantization (optional, for AirLLM fallback)
-# bitsandbytes>=0.41.0
-
-# NeMo TTS (install separately if needed)
-# nemo_toolkit[all]>=1.20.0
-
-# Whisper STT (install from local ./whisper directory)
-# pip install -e ./whisper
-
-# Mistral Inference (install from local ./mistral-inference directory)
-# pip install -e ./mistral-inference

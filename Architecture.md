@@ -1,80 +1,50 @@
-# Elara v2.0 Architecture
+# Elara v2.0 Architecture (Functional)
 
 ## System Overview
 
 ```mermaid
 graph TD
-    A[User Input<br/>Text / Voice / Image] --> B[Voice Gateway<br/>Whisper STT]
-    B --> C[Input Multiplexer]
-    C --> D[Constitutional<br/>Pre-Filter]
-    D -->|Blocked| X[Safety Response]
-    D -->|Allowed| E[Tier Router]
+    A[User Input<br/>Text / Voice] --> B[Voice Gateway<br/>Whisper STT]
+    B --> C[Safety Filter<br/>Pre-check]
+    C -->|Blocked| X[Safety Response]
+    C -->|Allowed| D[Tool Router]
 
-    E -->|Tier 1: 95%| F[Mistral Direct]
-    E -->|Tier 2: 4%| G[CLaRa Retrieval<br/>+ Mistral]
-    E -->|Tier 3: 1%| H[TRM + TiDAR<br/>+ Tools]
+    D -->|Tool Call| E[Calculator]
+    D -->|No Tool| F[Tier Router]
 
-    F --> I[Constitutional<br/>Post-Filter]
-    G --> I
-    H --> I
-    I --> J[Voice Gateway<br/>NeMo TTS]
-    J --> K[User Output<br/>Text / Audio]
+    F -->|Tier 1| G[Gemma 1B Local]
+    F -->|Tier 2| H[FAISS RAG + Gemma]
+    F -->|Tier 3| I[Cloud API Fallback]
+
+    G --> J[Safety Filter<br/>Post-check]
+    H --> J
+    I --> J
+    E --> J
+
+    J --> K[Voice Gateway<br/>TTS]
+    K --> L[User Output]
 ```
 
-## Tier Architecture
+## Tier Details
 
-### Tier 1: Direct Generation (95% of queries)
-- **Path**: Input → Mistral → Output
-- **Latency**: <100ms
-- **Use case**: Simple queries, greetings, factual Q&A
+### Tier 1: Direct Local Model
+- Uses `llama-cpp-python` to run Gemma 3 1B IT (Q4_K_M).
+- Optimized for speed and low memory (~600MB RAM).
 
-### Tier 2: Retrieval-Augmented (4% of queries)
-- **Path**: Input → CLaRa Retrieval → Augmented Prompt → Mistral → Output
-- **Components**:
-  - `SCPCompressor`: Compresses documents into memory tokens
-  - `CLaRaStore`: Persistent vector store with mmap
-  - `QueryReasoner`: Encodes queries into retrieval space
-  - `DifferentiableTopK`: End-to-end trainable retrieval
-- **Latency**: <500ms
+### Tier 2: RAG with FAISS
+- Uses `SentenceTransformers` (all-MiniLM-L6-v2) for embeddings.
+- Uses `FAISS` for efficient vector search.
+- Injects relevant context into the Tier 1 prompt.
 
-### Tier 3: Deep Reasoning (1% of queries)
-- **Path**: Input → TRM Reasoning → TiDAR Generation → Tool Execution → Output
-- **Components**:
-  - `TRMCore`: 2-layer recursive reasoning with adaptive halting
-  - `TiDARGenerator`: Hybrid AR + diffusion with draft-verify
-  - `ToolRouter`: XML-parsed function calling
-  - `AirLLMFallback`: Layer-wise streaming for large models
-- **Latency**: <2s
+### Tier 3: API Fallback
+- Calls external LLMs (via OpenRouter/Together AI) for complex queries.
+- Used when specific keywords are detected or local models are insufficient.
 
-## Safety Architecture
-
-The Constitutional Layer is implemented as **code, not model weights**:
-
-- **Immutable**: Principles defined in YAML, enforced by pattern matching
-- **Auditable**: Every decision logged with timestamps and principle IDs
-- **Dual-stage**: Pre-filter (input) + Post-filter (output)
-- **Categories**: Truth, Harm Prevention, Dignity, Wisdom, Stewardship
+## Safety Layer
+- Rule-based filtering using `re` and `yaml` configuration.
+- Protects against harmful content and PII leaks.
+- Performs both pre-generation and post-generation checks.
 
 ## Voice Pipeline
-
-Voice I/O is **completely decoupled** from the core AI model:
-
-```
-Audio → Whisper STT → Text → [Model Reasoning] → Text → NeMo TTS → Audio
-```
-
-This ensures:
-1. The model always reasons over text (debuggable)
-2. Voice components can be swapped independently
-3. No audio data touches the model weights
-
-## Key Design Decisions
-
-| Decision | Rationale |
-|----------|-----------|
-| Weight-shared TRM blocks | Minimize parameters while maximizing reasoning depth |
-| Hybrid attention (AR + diffusion) | Parallel drafting with quality guarantees |
-| Differentiable top-k | End-to-end training of retriever + generator |
-| Code-based safety | Auditable, version-controlled, immune to jailbreaks |
-| Layer-wise AirLLM | Run large models on 4GB devices |
-| Lazy model loading | Only load what's needed, minimize startup time |
+- **STT**: OpenAI Whisper (Tiny/Base).
+- **TTS**: pyttsx3 (offline fallback) or NVIDIA NeMo (high quality).

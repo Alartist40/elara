@@ -1,0 +1,9 @@
+block:
+  - pattern: '\b(how\s+to\s+make|build|create)\s+(a\s+)?(bomb|weapon|drug)\b'
+    reason: "Harmful content"
+  - pattern: '\b(credit\s+card|ssn|social\s+security)\s*\d'
+    reason: "PII protection"
+
+flag:
+  - pattern: '\b(damn|hell)\b'
+    replacement: "[redacted]"
