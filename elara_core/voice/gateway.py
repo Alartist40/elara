@@ -19,9 +19,17 @@ class VoiceGateway:
     def __init__(
         self,
         stt_model: str = "tiny", # Default to tiny for speed
-        tts_use_nemo: bool = False, # Default to False for 4GB target
+        tts_use_nemo: Optional[bool] = None, # Auto-detect if None
         device: str = "auto",
     ):
+        if tts_use_nemo is None:
+            # Auto-detect: use NeMo if CUDA available
+            try:
+                import torch
+                tts_use_nemo = torch.cuda.is_available()
+            except ImportError:
+                tts_use_nemo = False
+
         self.stt: Optional[WhisperSTT] = None
         self.tts: Optional[ElaraTTS] = None
         self.stt_model_size = stt_model
@@ -54,4 +62,5 @@ class VoiceGateway:
             "tts_loaded": self.tts is not None,
             "stt_model": self.stt_model_size,
             "device": self.device,
+            "tts_use_nemo": self.tts_use_nemo,
         }
