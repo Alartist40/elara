@@ -30,5 +30,8 @@ psutil>=5.9.0
 # Voice Extensions (PersonaPlex-inspired)
 # NOTE: MimiTTS requires 'moshi'. Install it manually from source:
 # pip install git+https://github.com/kyutai-labs/moshi.git
+# NOTE: sphn requires building Opus, which is incompatible with CMake 4.x.
+# If you see "Compatibility with CMake < 3.5 has been removed", run:
+#   pip install 'cmake<4' && CMAKE=$(which cmake) pip install sphn
 sphn>=0.1.0
 sounddevice>=0.4.0

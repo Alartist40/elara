@@ -23,11 +23,13 @@ class DuplexVoiceHandler:
         tts_engine,
         persona_manager,
         sample_rate: int = 16000, # STT usually expects 16kHz
+        use_streaming: bool = True,
     ):
         self.stt = stt_engine
         self.process_callback = process_callback
         self.tts = tts_engine
         self.persona = persona_manager
+        self.use_streaming = use_streaming
 
         self.sample_rate = sample_rate
         self.frame_size = 1920  # 80ms at 24kHz, but we might need to adjust for STT
@@ -103,7 +105,7 @@ class DuplexVoiceHandler:
             self.on_assistant_text(response_text)
 
         # Stream TTS
-        if hasattr(self.tts, 'synthesize_streaming'):
+        if self.use_streaming and hasattr(self.tts, 'synthesize_streaming'):
             async for chunk in self.tts.synthesize_streaming(response_text):
                 if not self.is_speaking:
                     break  # Interrupted

@@ -101,7 +101,7 @@ async def voice_conversation_mode(args, tier1, tier2, tier3, router, safety, too
 
     try:
         recorder = VoiceRecorder(sample_rate=16000) # Whisper SR
-    except Exception as e:
+    except (OSError, RuntimeError) as e:
         print(f"Microphone not available: {e}")
         print("Falling back to text-based interactive mode...")
         interactive_mode(tier1, tier2, tier3, router, safety, tools, voice, args)
@@ -120,6 +120,7 @@ async def voice_conversation_mode(args, tier1, tier2, tier3, router, safety, too
         ),
         tts_engine=tts_engine,
         persona_manager=persona,
+        use_streaming=args.voice_streaming
     )
 
     # Set up callbacks
