@@ -11,9 +11,12 @@ class Tier1Engine:
 
     def __init__(
         self,
-        model_path: str = "models/gemma-3-1b-it-q4_0.gguf",
+        model_path: Optional[str] = None,
         n_threads: Optional[int] = None
     ):
+        if model_path is None:
+            model_path = os.getenv("ELARA_MODEL_PATH", "models/gemma-3-1b-it-q4_0.gguf")
+
         if n_threads is None:
             n_threads = os.cpu_count() or 4
 
@@ -34,12 +37,12 @@ class Tier1Engine:
         self.system_prompt = """You are Elara, a helpful AI assistant.
 Be concise, accurate, and helpful. If unsure, say so."""
 
-    def generate(self, prompt: str, max_tokens: int = 256) -> str:
+    def generate(self, prompt: str, max_tokens: int = 256, system_prompt: Optional[str] = None) -> str:
         if self.model is None:
             return "Error: Tier 1 model not loaded."
 
         messages = [
-            {"role": "system", "content": self.system_prompt},
+            {"role": "system", "content": system_prompt or self.system_prompt},
             {"role": "user", "content": prompt}
         ]
 

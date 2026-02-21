@@ -1,5 +1,6 @@
 import faiss
 import numpy as np
+import os
 from sentence_transformers import SentenceTransformer
 import json
 import logging
@@ -16,8 +17,8 @@ class Tier2Engine:
     def __init__(
         self,
         tier1_engine: Optional[Any] = None,  # Reuse for generation
-        index_path: str = "data/faiss.index",
-        docs_path: str = "data/documents.json",
+        index_path: Optional[str] = None,
+        docs_path: Optional[str] = None,
         model_name: str = "all-MiniLM-L6-v2",  # 22MB embedding model
     ):
         self.generator = tier1_engine
@@ -32,8 +33,8 @@ class Tier2Engine:
             dim = 384 # Fallback
 
         # FAISS index (pre-built or empty)
-        self.index_path = Path(index_path)
-        self.docs_path = Path(docs_path)
+        self.index_path = Path(index_path or os.getenv("ELARA_INDEX_PATH", "data/faiss.index"))
+        self.docs_path = Path(docs_path or os.getenv("ELARA_DOCS_PATH", "data/documents.json"))
 
         if self.index_path.exists() and self.docs_path.exists():
             self.index = faiss.read_index(str(index_path))
@@ -95,18 +96,21 @@ class Tier2Engine:
             if i != -1 and i < len(self.documents)
         ]
 
-    def generate(self, query: str, max_tokens: int = 512) -> str:
-        if self.generator is None:
-            logging.warning("Tier2Engine: returning raw documents — no generator available.")
-            docs = self.retrieve(query, k=3)
-            if not docs:
-                return "Error: No generator available and no documents retrieved."
+    def generate_standalone(self, query: str, max_tokens: int = 512) -> str:
+        """Use a lightweight local model when tier1 is unavailable."""
+        docs = self.retrieve(query, k=3)
+        if not docs:
+            return "I don't have relevant information to answer that."
 
-            doc_lines = chr(10).join(
-                f"{i+1}. {d[:200]}{'...' if len(d) > 200 else ''}"
-                for i, d in enumerate(docs)
-            )
-            return f"Retrieved documents (no generator available):\n\n{doc_lines}\n\nQuery: {query}"
+        # Simple extractive answer - pick most relevant sentence
+        best_doc = docs[0]
+        sentences = best_doc.split('.')
+        return sentences[0] + '.' if sentences else best_doc
+
+    def generate(self, query: str, max_tokens: int = 512, system_prompt: Optional[str] = None) -> str:
+        if self.generator is None:
+            logging.warning("Tier2Engine: No generator available. Using standalone fallback.")
+            return self.generate_standalone(query, max_tokens)
 
         # Retrieve context
         docs = self.retrieve(query, k=3)
@@ -124,7 +128,7 @@ Answer:"""
             # No relevant docs, fall back to Tier 1 style
             prompt = query
 
-        return self.generator.generate(prompt, max_tokens)
+        return self.generator.generate(prompt, max_tokens, system_prompt=system_prompt)
 
     def has_relevant_docs(self, query: str, threshold: float = 0.3) -> bool:
         """Check if query has relevant documents (for routing)."""
