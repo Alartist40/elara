@@ -25,6 +25,7 @@ pyyaml>=6.0
 tqdm>=4.65.0
 python-dotenv>=1.2.0
 soundfile>=0.12.0
+psutil>=5.9.0
 
 # Voice Extensions (PersonaPlex-inspired)
 # NOTE: MimiTTS requires 'moshi'. Install it manually from source:

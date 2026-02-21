@@ -21,6 +21,7 @@ def main():
     parser.add_argument("--no-tts-mimi", action="store_true", default=False, help="Disable Mimi neural TTS")
     parser.add_argument("--tts-nemo", action="store_true", default=None, help="Force NeMo TTS (requires GPU)")
     parser.add_argument("--tts-cpu", action="store_true", help="Force CPU TTS (pyttsx3)")
+    parser.add_argument("--monitor", action="store_true", help="Monitor memory usage")
     args = parser.parse_args()
 
     if not (args.interactive or args.text):
@@ -48,6 +49,10 @@ def main():
     elif args.tts_cpu:
         use_nemo = False
 
+    if args.monitor:
+        from elara_core.utils import check_memory
+        check_memory()
+
     voice = VoiceGateway(
         tts_use_mimi=not (args.no_tts_mimi or args.tts_nemo or args.tts_cpu),
         tts_use_nemo=args.tts_nemo,
@@ -58,24 +63,28 @@ def main():
     if args.voice_input:
         asyncio.run(voice_conversation_mode(args, tier1, tier2, tier3, router, safety, tools, voice))
     elif args.interactive:
-        print("Elara v2.0 Functional - Type 'exit' to quit")
-        while True:
-            try:
-                user_input = input("> ").strip()
-            except (KeyboardInterrupt, EOFError):
-                break
-
-            if user_input.lower() in ["exit", "quit"]:
-                break
-
-            response = process_input(user_input, tier1, tier2, tier3, router, safety, tools)
-            print(f"Assistant: {response}")
-
-            if args.voice:
-                voice.speak(response)
+        interactive_mode(tier1, tier2, tier3, router, safety, tools, voice, args)
     elif args.text:
         response = process_input(args.text, tier1, tier2, tier3, router, safety, tools)
         print(response)
+        if args.voice:
+            voice.speak(response)
+
+def interactive_mode(tier1, tier2, tier3, router, safety, tools, voice, args):
+    """Text-based interactive mode."""
+    print("Elara v2.0 Functional - Type 'exit' to quit")
+    while True:
+        try:
+            user_input = input("> ").strip()
+        except (KeyboardInterrupt, EOFError):
+            break
+
+        if user_input.lower() in ["exit", "quit"]:
+            break
+
+        response = process_input(user_input, tier1, tier2, tier3, router, safety, tools)
+        print(f"Assistant: {response}")
+
         if args.voice:
             voice.speak(response)
 
@@ -84,6 +93,14 @@ async def voice_conversation_mode(args, tier1, tier2, tier3, router, safety, too
     from elara_core.voice.duplex_handler import DuplexVoiceHandler
     from elara_core.persona.voice_persona import VoicePersonaManager
     from elara_core.voice.recorder import VoiceRecorder
+
+    try:
+        recorder = VoiceRecorder(sample_rate=16000) # Whisper SR
+    except Exception as e:
+        print(f"Microphone not available: {e}")
+        print("Falling back to text-based interactive mode...")
+        interactive_mode(tier1, tier2, tier3, router, safety, tools, voice, args)
+        return
 
     # Initialize persona
     persona = VoicePersonaManager(voice.get_mimi())
@@ -122,8 +139,6 @@ async def voice_conversation_mode(args, tier1, tier2, tier3, router, safety, too
     handler.on_user_text = on_user
     handler.on_assistant_text = on_assistant
     handler.on_audio_out = on_audio
-
-    recorder = VoiceRecorder(sample_rate=16000) # Whisper SR
 
     print("Voice conversation started. Speak naturally (Ctrl+C to exit)...")
     await handler.start()

@@ -62,19 +62,33 @@ python3 -m elara_core.main --interactive
 python3 -m elara_core.main --interactive --voice
 
 # Full-duplex voice conversation (microphone input)
-python3 -m elara_core.main --voice-input
+python3 -m elara_core.main --voice-input --voice-streaming
 ```
 
 ### Forcing TTS Engine
 ```bash
 # Force Mimi (Default, high quality)
-python3 -m elara_core.main --voice-input --tts-mimi
+python3 -m elara_core.main --voice-input
 
 # Force NeMo (requires GPU/CUDA)
 python3 -m elara_core.main --voice-input --tts-nemo
 
 # Force local fallback (pyttsx3)
 python3 -m elara_core.main --voice-input --tts-cpu
+
+# Disable Mimi and use fallback
+python3 -m elara_core.main --voice-input --no-tts-mimi
+```
+
+### Voice Cloning
+1. Record 5-10 seconds of speech as `data/voices/my_voice.wav` (24kHz mono)
+2. Elara automatically creates an embedding on first use.
+3. The voice will be available as a persona if defined in `config/personas.yaml`.
+
+### Monitoring
+```bash
+# Monitor memory usage (4GB target)
+python3 -m elara_core.main --interactive --monitor
 ```
 
 ### Building the Knowledge Base
