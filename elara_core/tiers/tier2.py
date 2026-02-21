@@ -51,8 +51,13 @@ class Tier2Engine:
 
     def add_documents(self, texts: List[str]):
         """
-        Add documents to the store.
-        Call this during setup, not at runtime.
+        Add multiple texts to the vector store and persist them to disk.
+        
+        Parameters:
+            texts (List[str]): A list of document strings to encode and store.
+        
+        Raises:
+            RuntimeError: If the embedding encoder is not loaded.
         """
         if self.encoder is None:
             raise RuntimeError("Encoder not loaded.")
@@ -80,7 +85,13 @@ class Tier2Engine:
     @functools.lru_cache(maxsize=16)
     def _get_cached_embedding(self, query: str) -> Optional[np.ndarray]:
         """
-        Memoized encoding to avoid redundant BERT passes during routing/generation.
+        Return a normalized embedding for the given query; results are memoized to avoid redundant encodings.
+        
+        Parameters:
+            query (str): Text to encode.
+        
+        Returns:
+            np.ndarray or None: L2-normalized embedding vector for the query, or `None` if the encoder is unavailable.
         """
         if self.encoder is None:
             return None
@@ -90,7 +101,18 @@ class Tier2Engine:
         return emb
 
     def retrieve(self, query: str, k: int = 3) -> List[str]:
-        """Get top-k relevant documents."""
+        """
+        Retrieve the most relevant documents for a query.
+        
+        Uses a cached embedding and the FAISS index to find up to `k` documents ordered by relevance. Returns an empty list when no documents are indexed or when an embedding cannot be produced.
+        
+        Parameters:
+        	query (str): The input query to search for.
+        	k (int): Maximum number of documents to return.
+        
+        Returns:
+        	List[str]: The top relevant documents ordered by decreasing relevance; may contain fewer than `k` items.
+        """
         if len(self.documents) == 0:
             return []
 
@@ -141,7 +163,18 @@ Answer:"""
         return self.generator.generate(prompt, max_tokens)
 
     def has_relevant_docs(self, query: str, threshold: float = 0.3) -> bool:
-        """Check if query has relevant documents (for routing)."""
+        """
+        Determine whether the FAISS index contains documents relevant to a query.
+        
+        This returns `false` when the index is empty or an embedding cannot be produced for the query.
+        
+        Parameters:
+        	query (str): The user's query to check for relevant documents.
+        	threshold (float): Similarity threshold in [0, 1]; the function considers a document relevant if the top similarity score is greater than this value.
+        
+        Returns:
+        	`true` if the highest similarity score for the query exceeds `threshold`, `false` otherwise.
+        """
         if len(self.documents) == 0:
             return False
 
