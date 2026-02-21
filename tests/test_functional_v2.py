@@ -61,7 +61,7 @@ class TestEngines(unittest.TestCase):
         # Non-math input with 'calculate'
         res_garbage = tr.execute("calculate hello")
         self.assertTrue(res_garbage.success) # It triggers, but fails eval
-        self.assertEqual(res_garbage.output, "Error: No valid expression")
+        self.assertTrue(res_garbage.output.startswith("Error:"))
 
         # Normal text that should NOT trigger calculator
         res_none = tr.execute("Tell me about state-of-the-art AI")

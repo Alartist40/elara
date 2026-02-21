@@ -35,18 +35,43 @@ class Tier2Engine:
         # FAISS index (pre-built or empty)
         self.index_path = Path(index_path or os.getenv("ELARA_INDEX_PATH", "data/faiss.index"))
         self.docs_path = Path(docs_path or os.getenv("ELARA_DOCS_PATH", "data/documents.json"))
+        self.documents = []
 
-        if self.index_path.exists() and self.docs_path.exists():
-            self.index = faiss.read_index(str(self.index_path))
-            try:
+        try:
+            if self.index_path.exists() and self.docs_path.exists():
+                self.index = faiss.read_index(str(self.index_path))
                 with open(self.docs_path, encoding="utf-8") as f:
                     self.documents = json.load(f)
-            except Exception as e:
-                print(f"Error loading documents: {e}")
-                self.documents = []
-        else:
-            # Empty index - will build on first add
+
+                # Verify index consistency
+                if self.index.ntotal != len(self.documents):
+                    raise ValueError(f"Index size ({self.index.ntotal}) mismatch with documents ({len(self.documents)})")
+            else:
+                self.index = faiss.IndexFlatIP(dim)
+        except Exception as e:
+            logging.error(f"FAISS index corrupted or mismatch: {e}")
             self.index = faiss.IndexFlatIP(dim)
+            if self.docs_path.exists():
+                self._rebuild_index()
+            else:
+                self.documents = []
+
+    def _rebuild_index(self):
+        """Rebuild index from existing documents.json."""
+        try:
+            logging.info("Attempting to rebuild index from documents.json...")
+            with open(self.docs_path, encoding="utf-8") as f:
+                texts = json.load(f)
+
+            if not texts:
+                self.documents = []
+                return
+
+            self.documents = [] # Clear and re-add
+            self.add_documents(texts)
+            logging.info("Index rebuilt successfully")
+        except Exception as e:
+            logging.critical(f"Index rebuild failed: {e}")
             self.documents = []
 
     def add_documents(self, texts: List[str]):
@@ -100,12 +125,18 @@ class Tier2Engine:
         """Extractive retrieval fallback used when tier1 is unavailable. max_tokens does not apply."""
         docs = self.retrieve(query, k=3)
         if not docs:
-            return "I don't have relevant information to answer that."
+            return "I don't have relevant information to answer that. [Tier 1 unavailable]"
 
         # Simple extractive answer - pick most relevant sentence
         best_doc = docs[0]
         sentences = best_doc.split('.')
-        return sentences[0] + '.' if sentences else best_doc
+        excerpt = sentences[0].strip() + '.' if sentences else best_doc[:200]
+
+        return (
+            f"[Retrieved from documents - Tier 1 unavailable]\n\n"
+            f"Relevant excerpt: {excerpt}\n\n"
+            f"For a complete answer, please ensure the local language model is loaded."
+        )
 
     def generate(self, query: str, max_tokens: int = 512, system_prompt: Optional[str] = None) -> str:
         if self.generator is None:

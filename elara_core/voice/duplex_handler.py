@@ -44,6 +44,7 @@ class DuplexVoiceHandler:
         self.on_user_text: Optional[Callable[[str], None]] = None
         self.on_assistant_text: Optional[Callable[[str], None]] = None
         self.on_audio_out: Optional[Callable[[np.ndarray], None]] = None
+        self.on_interrupt: Optional[Callable[[], None]] = None
 
     async def process_audio_chunk(self, pcm: np.ndarray):
         """Feed incoming audio from microphone."""
@@ -75,7 +76,8 @@ class DuplexVoiceHandler:
         """User interrupted assistant."""
         logger.info("Interruption detected")
         self.is_speaking = False
-        # Stop current synthesis if possible
+        if self.on_interrupt:
+            self.on_interrupt()
 
     async def _process_utterance(self):
         """Transcribe and respond to user speech."""
