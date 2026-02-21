@@ -3,6 +3,7 @@ import numpy as np
 import os
 from sentence_transformers import SentenceTransformer
 import json
+import functools
 import logging
 from pathlib import Path
 from typing import List, Optional, Any
@@ -51,8 +52,13 @@ class Tier2Engine:
 
     def add_documents(self, texts: List[str]):
         """
-        Add documents to the store.
-        Call this during setup, not at runtime.
+        Add multiple texts to the vector store and persist them to disk.
+        
+        Parameters:
+            texts (List[str]): A list of document strings to encode and store.
+        
+        Raises:
+            RuntimeError: If the embedding encoder is not loaded.
         """
         if self.encoder is None:
             raise RuntimeError("Encoder not loaded.")
@@ -77,14 +83,44 @@ class Tier2Engine:
         with open(self.docs_path, "w", encoding="utf-8") as f:
             json.dump(self.documents, f, ensure_ascii=False)
 
+    @functools.lru_cache(maxsize=16)
+    def _get_cached_embedding(self, query: str) -> Optional[np.ndarray]:
+        """
+        Return a normalized embedding for the given query; results are memoized to avoid redundant encodings.
+        
+        Parameters:
+            query (str): Text to encode.
+        
+        Returns:
+            np.ndarray or None: L2-normalized embedding vector for the query, or `None` if the encoder is unavailable.
+        """
+        if self.encoder is None:
+            return None
+        # Encode with explicit numpy conversion
+        emb = self.encoder.encode([query], convert_to_numpy=True)
+        faiss.normalize_L2(emb)
+        return emb
+
     def retrieve(self, query: str, k: int = 3) -> List[str]:
-        """Get top-k relevant documents."""
-        if len(self.documents) == 0 or self.encoder is None:
+        """
+        Retrieve the most relevant documents for a query.
+        
+        Uses a cached embedding and the FAISS index to find up to `k` documents ordered by relevance. Returns an empty list when no documents are indexed or when an embedding cannot be produced.
+        
+        Parameters:
+        	query (str): The input query to search for.
+        	k (int): Maximum number of documents to return.
+        
+        Returns:
+        	List[str]: The top relevant documents ordered by decreasing relevance; may contain fewer than `k` items.
+        """
+        if len(self.documents) == 0:
             return []
 
-        # Encode query
-        query_emb = self.encoder.encode([query])
-        faiss.normalize_L2(query_emb)
+        # Use cached embedding to avoid redundant encoding overhead
+        query_emb = self._get_cached_embedding(query)
+        if query_emb is None:
+            return []
 
         # Search
         scores, indices = self.index.search(query_emb, k)
@@ -131,12 +167,26 @@ Answer:"""
         return self.generator.generate(prompt, max_tokens, system_prompt=system_prompt)
 
     def has_relevant_docs(self, query: str, threshold: float = 0.3) -> bool:
-        """Check if query has relevant documents (for routing)."""
-        if len(self.documents) == 0 or self.encoder is None:
+        """
+        Determine whether the FAISS index contains documents relevant to a query.
+        
+        This returns `false` when the index is empty or an embedding cannot be produced for the query.
+        
+        Parameters:
+        	query (str): The user's query to check for relevant documents.
+        	threshold (float): Similarity threshold in [0, 1]; the function considers a document relevant if the top similarity score is greater than this value.
+        
+        Returns:
+        	`true` if the highest similarity score for the query exceeds `threshold`, `false` otherwise.
+        """
+        if len(self.documents) == 0:
             return False
 
-        query_emb = self.encoder.encode([query])
-        faiss.normalize_L2(query_emb)
+        # Use cached embedding to avoid redundant encoding overhead
+        query_emb = self._get_cached_embedding(query)
+        if query_emb is None:
+            return False
+
         scores, _ = self.index.search(query_emb, 1)
 
         return scores[0][0] > threshold

@@ -1,0 +1,3 @@
+## 2025-05-14 - [RAG Query Encoding Caching]
+**Learning:** In a multi-tier RAG system, the same user query is often passed through the embedding model multiple times (e.g., once for routing/relevance check and once for final retrieval). For CPU-bound edge devices, this BERT encoding is the primary bottleneck (~10-20ms per pass), while the vector search itself is negligible (<0.1ms).
+**Action:** Always memoize the query embedding within the RAG engine for the duration of a request lifecycle. Using `functools.lru_cache` on an internal encoding method provides a ~50% reduction in total RAG overhead.
