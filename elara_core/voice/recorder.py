@@ -59,13 +59,21 @@ class VoiceRecorder:
         with stream:
             while self._is_recording:
                 chunk = await self._queue.get()
+                if not self._is_recording:
+                    break
                 yield chunk.flatten()
 
     def stop(self):
         """Stops the recording."""
         self._is_recording = False
         # Feed an empty chunk to unblock the queue.get() if needed
-        try:
-            self._queue.put_nowait(np.zeros((self.frame_size, self.channels), dtype='float32'))
-        except asyncio.QueueFull:
-            pass
+        loop = getattr(self, '_loop', None)
+        if loop is not None:
+            try:
+                loop.call_soon_threadsafe(
+                    self._queue.put_nowait,
+                    np.zeros((self.frame_size, self.channels), dtype='float32')
+                )
+            except (RuntimeError, asyncio.QueueFull):
+                # Loop might be closed or queue full
+                pass

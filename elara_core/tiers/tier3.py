@@ -1,5 +1,6 @@
 import openai
 import os
+from typing import Optional
 
 class Tier3Engine:
     """
@@ -25,7 +26,7 @@ class Tier3Engine:
         self.system_prompt = """You are Elara, a helpful AI assistant.
 Be concise, accurate, and helpful. If unsure, say so."""
 
-    def generate(self, prompt: str, max_tokens: int = 1024, system_prompt: str = None) -> str:
+    def generate(self, prompt: str, max_tokens: int = 1024, system_prompt: Optional[str] = None) -> str:
         if not self.client:
             return "Error: Tier 3 API key not set."
 

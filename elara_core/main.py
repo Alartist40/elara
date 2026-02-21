@@ -94,6 +94,11 @@ async def voice_conversation_mode(args, tier1, tier2, tier3, router, safety, too
     from elara_core.persona.voice_persona import VoicePersonaManager
     from elara_core.voice.recorder import VoiceRecorder
 
+    tts_engine = voice.get_mimi()
+    if tts_engine is None:
+        print("Error: Mimi TTS not available. Install 'moshi' or disable --voice-input.")
+        return
+
     try:
         recorder = VoiceRecorder(sample_rate=16000) # Whisper SR
     except Exception as e:
@@ -103,7 +108,7 @@ async def voice_conversation_mode(args, tier1, tier2, tier3, router, safety, too
         return
 
     # Initialize persona
-    persona = VoicePersonaManager(voice.get_mimi())
+    persona = VoicePersonaManager(tts_engine)
     persona.load_persona("elara")
 
     # Create duplex handler
@@ -113,7 +118,7 @@ async def voice_conversation_mode(args, tier1, tier2, tier3, router, safety, too
             text, tier1, tier2, tier3, router, safety, tools,
             system_prompt=persona.get_system_prompt()
         ),
-        tts_engine=voice.get_mimi() or voice, # Fallback to voice gateway
+        tts_engine=tts_engine,
         persona_manager=persona,
     )
 
@@ -126,15 +131,21 @@ async def voice_conversation_mode(args, tier1, tier2, tier3, router, safety, too
         print(f"\rElara: {text}")
         print("> ", end="", flush=True)
 
-    import sounddevice as sd
-    # Use OutputStream for gapless playback
-    audio_stream = sd.OutputStream(samplerate=24000, channels=1, dtype='float32')
-    audio_stream.start()
+    audio_stream = None
+    try:
+        import sounddevice as sd
+        # Use OutputStream for gapless playback
+        audio_stream = sd.OutputStream(samplerate=24000, channels=1, dtype='float32')
+        audio_stream.start()
+    except Exception as e:
+        print(f"Audio output not available: {e}")
+        # We can continue without audio output if in voice-input mode (maybe just text?)
+        # But usually voice-input implies voice-output.
 
     def on_audio(chunk: np.ndarray):
-        # Play audio chunk (platform-specific)
-        # Using sounddevice OutputStream for gapless playback
-        audio_stream.write(chunk.reshape(-1, 1).astype(np.float32))
+        if audio_stream:
+            # Using sounddevice OutputStream for gapless playback
+            audio_stream.write(chunk.reshape(-1, 1).astype(np.float32))
 
     handler.on_user_text = on_user
     handler.on_assistant_text = on_assistant
@@ -146,14 +157,32 @@ async def voice_conversation_mode(args, tier1, tier2, tier3, router, safety, too
     try:
         async for chunk in recorder.stream():
             await handler.process_audio_chunk(chunk)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, asyncio.CancelledError):
+        pass
+    finally:
         await handler.stop()
         recorder.stop()
-        audio_stream.stop()
-        audio_stream.close()
+        if audio_stream:
+            audio_stream.stop()
+            audio_stream.close()
         print("\nConversation ended.")
 
 def process_input(user_input, tier1, tier2, tier3, router, safety, tools, system_prompt=None):
+    """
+    Process a user input through safety checks, optional tool execution, tier selection,
+    and generation, then apply post-generation safety filtering.
+
+    Parameters:
+        user_input (str): The raw text from the user.
+        tier1, tier2, tier3 (Engine): The generation tiers.
+        router (TierRouter): Logic for selecting the appropriate tier.
+        safety (SafetyFilter): Pre- and post-generation filtering.
+        tools (ToolRouter): Optional tool execution.
+        system_prompt (str, optional): Optional system-level prompt passed to the generation engines.
+
+    Returns:
+        str: The assistant's final response text.
+    """
     # 1. Safety Pre-check: Thread cleaned input through the pipeline
     allowed, scrubbed_input = safety.check(user_input)
     if not allowed:

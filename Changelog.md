@@ -2,7 +2,7 @@
 
 All notable changes to the Elara project will be documented in this file.
 
-## [2.2.0-voice] - 2026-02-27
+## [2.2.0-voice] - 2026-02-21
 
 ### Added
 - **Mimi Neural TTS**: Integrated Mimi codec for high-quality, low-latency neural speech synthesis (~200MB RAM).

@@ -16,6 +16,11 @@ class MimiTTS:
     """
     Text-to-Speech using Mimi neural audio codec.
 
+    NOTE: In the current implementation, synthesis is a placeholder that uses
+    prosodic variation on the voice embedding but does not yet perform full
+    text-to-speech articulation. It provides the speaker's timbre and rhythm
+    but not intelligible words.
+
     Unlike NeMo (which synthesizes from scratch), Mimi uses:
     1. A small "acoustic prompt" (voice sample) to establish speaker identity
     2. Text → phoneme → discrete codes (via lightweight model or heuristic)

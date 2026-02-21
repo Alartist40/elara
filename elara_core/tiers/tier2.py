@@ -96,8 +96,8 @@ class Tier2Engine:
             if i != -1 and i < len(self.documents)
         ]
 
-    def generate_standalone(self, query: str, max_tokens: int = 512) -> str:
-        """Use a lightweight local model when tier1 is unavailable."""
+    def generate_standalone(self, query: str) -> str:
+        """Extractive retrieval fallback used when tier1 is unavailable. max_tokens does not apply."""
         docs = self.retrieve(query, k=3)
         if not docs:
             return "I don't have relevant information to answer that."
@@ -110,7 +110,7 @@ class Tier2Engine:
     def generate(self, query: str, max_tokens: int = 512, system_prompt: Optional[str] = None) -> str:
         if self.generator is None:
             logging.warning("Tier2Engine: No generator available. Using standalone fallback.")
-            return self.generate_standalone(query, max_tokens)
+            return self.generate_standalone(query)
 
         # Retrieve context
         docs = self.retrieve(query, k=3)

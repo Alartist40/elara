@@ -108,8 +108,9 @@ class VoiceGateway:
     def get_stats(self) -> Dict[str, Any]:
         return {
             "stt_loaded": self.stt is not None,
-            "tts_loaded": self.tts is not None,
+            "tts_loaded": self.tts is not None or self._mimi_tts is not None,
             "stt_model": self.stt_model_size,
             "device": self.device,
             "tts_use_nemo": self.tts_use_nemo,
+            "tts_use_mimi": self._mimi_tts is not None,
         }

@@ -38,22 +38,25 @@ class VoicePersonaManager:
 
     def _load_config(self):
         """Load persona definitions from YAML."""
-        if not self.config_path.exists():
-            self._create_default_config()
-
         try:
+            if not self.config_path.exists():
+                self._create_default_config()
+
             with open(self.config_path, encoding="utf-8") as f:
                 data = yaml.safe_load(f)
 
             for name, cfg in data.get("personas", {}).items():
-                self.personas[name] = VoicePersona(
-                    name=name,
-                    voice_sample=cfg["voice_sample"],
-                    speaking_style=cfg.get("style", "neutral"),
-                    speed=cfg.get("speed", 1.0),
-                    pitch_shift=cfg.get("pitch", 0.0),
-                    text_style=cfg.get("text_style", "You are a helpful assistant.")
-                )
+                try:
+                    self.personas[name] = VoicePersona(
+                        name=name,
+                        voice_sample=cfg["voice_sample"],
+                        speaking_style=cfg.get("style", "neutral"),
+                        speed=cfg.get("speed", 1.0),
+                        pitch_shift=cfg.get("pitch", 0.0),
+                        text_style=cfg.get("text_style", "You are a helpful assistant.")
+                    )
+                except KeyError as e:
+                    logger.warning(f"Skipping persona '{name}': missing required field {e}")
         except Exception as e:
             logger.error(f"Failed to load persona config: {e}")
             # Fallback to a basic persona if everything fails
@@ -121,7 +124,8 @@ class VoicePersonaManager:
         """Get text style prompt for current persona."""
         if self.active_persona is None:
             return "You are a helpful assistant."
-        return self.personas[self.active_persona].text_style
+        persona = self.personas.get(self.active_persona)
+        return persona.text_style if persona else "You are a helpful assistant."
 
     def synthesize(self, text: str, override_persona: Optional[str] = None):
         """Synthesize with current persona's voice settings."""
