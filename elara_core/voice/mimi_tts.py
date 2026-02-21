@@ -16,10 +16,12 @@ class MimiTTS:
     """
     Text-to-Speech using Mimi neural audio codec.
 
-    NOTE: In the current implementation, synthesis is a placeholder that uses
+    KNOWN LIMITATION: In the current implementation, synthesis is a placeholder that uses
     prosodic variation on the voice embedding but does not yet perform full
     text-to-speech articulation. It provides the speaker's timbre and rhythm
-    but not intelligible words.
+    but not intelligible speech. This is intentional to maintain the 4GB RAM target
+    while providing high-quality voice timbre. For intelligible speech, Elara
+    falls back to NeMo or pyttsx3.
 
     Unlike NeMo (which synthesizes from scratch), Mimi uses:
     1. A small "acoustic prompt" (voice sample) to establish speaker identity

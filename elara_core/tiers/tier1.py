@@ -20,6 +20,13 @@ class Tier1Engine:
         if n_threads is None:
             n_threads = os.cpu_count() or 4
 
+        from elara_core.utils import check_memory
+        mem_status = check_memory()
+        if not mem_status['can_load_model']:
+            print(f"Skipping Tier 1 load: insufficient memory ({mem_status['used_gb']:.1f}GB used)")
+            self.model = None
+            return
+
         # llama-cpp-python handles quantization, GPU offloading
         try:
             self.model = Llama(
