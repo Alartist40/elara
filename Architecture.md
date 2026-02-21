@@ -4,25 +4,26 @@
 
 ```mermaid
 graph TD
-    A[User Input<br/>Text / Voice] --> B[Voice Gateway<br/>Whisper STT]
-    B --> C[Safety Filter<br/>Pre-check]
-    C -->|Blocked| X[Safety Response]
-    C -->|Allowed| D[Tool Router]
+    A[User Input<br/>Text / Voice] --> B[Voice Gateway / Recorder]
+    B --> C[Duplex Handler<br/>VAD / Interruption]
+    C --> D[Safety Filter<br/>Pre-check + Cleaning]
+    D -->|Blocked| X[Safety Response]
+    D -->|Allowed| E[Tool Router]
 
-    D -->|Tool Call| E[Calculator]
-    D -->|No Tool| F[Tier Router]
+    E -->|Tool Call| F[Calculator]
+    E -->|No Tool| G[Tier Router + Persona]
 
-    F -->|Tier 1| G[Gemma 1B Local]
-    F -->|Tier 2| H[FAISS RAG + Gemma]
-    F -->|Tier 3| I[Cloud API Fallback]
+    G -->|Tier 1| H[Gemma 1B Local]
+    G -->|Tier 2| I[FAISS RAG + Gemma]
+    G -->|Tier 3| J[Cloud API Fallback]
 
-    G --> J[Safety Filter<br/>Post-check]
-    H --> J
-    I --> J
-    E --> J
+    H --> K[Safety Filter<br/>Post-check]
+    I --> K
+    J --> K
+    F --> K
 
-    J --> K[Voice Gateway<br/>TTS]
-    K --> L[User Output]
+    K --> L[Voice Gateway<br/>Mimi / NeMo / pyttsx3]
+    L --> M[User Output]
 ```
 
 ## Tier Details
@@ -47,4 +48,16 @@ graph TD
 
 ## Voice Pipeline
 - **STT**: OpenAI Whisper (Tiny/Base).
-- **TTS**: pyttsx3 (offline fallback) or NVIDIA NeMo (high quality).
+- **Recorder**: Asynchronous capture via `sounddevice`.
+- **Full-Duplex**: `DuplexVoiceHandler` manages VAD and interruptions.
+- **TTS**:
+  - **Mimi**: Preferred high-quality neural codec (~200MB).
+  - **NeMo**: GPU-accelerated fallback.
+  - **pyttsx3**: Low-resource offline fallback.
+
+## Persona System
+- **VoicePersonaManager**: Coordinates voice embeddings and text styles.
+- **Voice Conditioning**: Applies persona-specific system prompts to all generation tiers.
+
+## Monitoring & Utilities
+- **Memory Monitor**: `elara_core/utils.py` provides real-time tracking of RAM usage to ensure compliance with the 4GB edge device target.

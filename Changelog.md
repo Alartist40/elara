@@ -2,6 +2,28 @@
 
 All notable changes to the Elara project will be documented in this file.
 
+## [2.2.0-voice] - 2026-02-21
+
+### Added
+- **Mimi Neural TTS**: Integrated Mimi codec for high-quality, low-latency neural speech synthesis (~200MB RAM).
+- **Full-Duplex Voice Mode**: New `--voice-input` mode allowing natural conversation with voice activity detection and interruptions.
+- **Voice Persona Manager**: Support for multiple personas with distinct voice samples and text-generation styles.
+- **Persona Conditioning**: All generation tiers now support custom system prompts based on the active persona.
+- **Standalone RAG Generation**: Tier 2 now includes an extractive fallback for answering questions when Tier 1 is unavailable.
+- **Environment Variable Support**: Key paths and hardware settings can now be configured via `.env` or system variables.
+- **Audio Recorder**: Asynchronous microphone capture using `sounddevice`.
+- **Memory Monitoring Utility**: Added `--monitor` flag and `elara_core/utils.py` for tracking RAM usage against the 4GB target.
+- **Robust Model Downloads**: Added exponential backoff retry logic to `scripts/download_mimi.py`.
+
+### Changed
+- **Safety Filter**: Implemented double-check logic (pre- and post-cleaning) to prevent safety bypasses.
+- **Tool Context Integration**: Refactored `main.py` to ensure tool results are correctly injected as context into the LLM prompt.
+- **Voice Gateway**: Re-architected for better fallback between Mimi, NeMo, and pyttsx3.
+
+### Fixed
+- Missing `__init__.py` files in `tools/`, `safety/`, and `persona/` directories.
+- Refactored `DuplexVoiceHandler` to use centralized `process_input` logic for consistency.
+
 ## [2.1.1-patch] - 2026-02-26
 
 ### Fixed
