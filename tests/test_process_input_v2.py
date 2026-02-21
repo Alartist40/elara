@@ -36,7 +36,7 @@ class TestProcessInput(unittest.TestCase):
             "4\n"
             "[END TOOL RESULT]\n\n"
         )
-        self.tier1.generate.assert_called_with(expected_context + "calculate 2+2")
+        self.tier1.generate.assert_called_with(expected_context + "calculate 2+2", system_prompt=None)
         self.assertEqual(response, "The result is 4.")
 
     def test_process_input_tool_exception(self):
@@ -53,7 +53,7 @@ class TestProcessInput(unittest.TestCase):
         response = process_input("some query", self.tier1, self.tier2, self.tier3, self.router, self.safety, self.tools)
 
         self.assertEqual(response, "Normal response")
-        self.tier1.generate.assert_called_with("some query")
+        self.tier1.generate.assert_called_with("some query", system_prompt=None)
 
 if __name__ == "__main__":
     unittest.main()

@@ -10,19 +10,6 @@ class Tier3Engine:
     def __init__(self):
         # Use OpenRouter for cheap access to many models
         # Or Together AI, or direct OpenAI
-        """
-        Initialize the Tier3Engine by configuring the external API client, model selection, and the default system prompt.
-        
-        Reads these environment variables:
-            - OPENROUTER_API_KEY: API key for the OpenRouter/OpenAI-compatible service (if unset, no client is created).
-            - OPENROUTER_BASE_URL: Base URL for the API (default: "https://openrouter.ai/api/v1").
-            - TIER3_MODEL: Model identifier to use for generation (default: "meta-llama/llama-3.3-70b-instruct").
-        
-        Behavior:
-            - If `OPENROUTER_API_KEY` is present, creates an OpenAI-compatible client configured with the base URL and API key; otherwise sets the client to `None`.
-            - Sets `self.model` and `self.system_prompt` to their configured or default values. The default system prompt is:
-              "You are Elara, a helpful AI assistant. Be concise, accurate, and helpful. If unsure, say so."
-        """
         self.api_key = os.getenv("OPENROUTER_API_KEY")
         self.base_url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
         self.model = os.getenv("TIER3_MODEL", "meta-llama/llama-3.3-70b-instruct")
@@ -39,17 +26,6 @@ class Tier3Engine:
 Be concise, accurate, and helpful. If unsure, say so."""
 
     def generate(self, prompt: str, max_tokens: int = 1024, system_prompt: str = None) -> str:
-        """
-        Generate a completion from the configured tier-3 cloud model using the provided prompt.
-        
-        Parameters:
-        	prompt (str): User prompt to send to the model.
-        	max_tokens (int): Maximum tokens to generate in the model response.
-        	system_prompt (str | None): Optional system prompt to override the engine's default system prompt.
-        
-        Returns:
-        	str: The model's response text; an empty string if the response content is None. If the engine is not configured or an error occurs, returns an error message string beginning with "Error".
-        """
         if not self.client:
             return "Error: Tier 3 API key not set."
 

@@ -1,12 +1,8 @@
 import os
+import shutil
 from huggingface_hub import hf_hub_download
 
 def download_mimi():
-    """
-    Download a specific tokenizer checkpoint from the Hugging Face repository and save it as models/mimi.safetensors.
-    
-    Creates the models directory if it does not exist, downloads the checkpoint from "nvidia/personaplex-7b-v1", and replaces any existing models/mimi.safetensors with the newly downloaded file.
-    """
     repo_id = "nvidia/personaplex-7b-v1"
     filename = "tokenizer-e351c8d8-checkpoint125.safetensors"
     local_dir = "models"
@@ -26,7 +22,7 @@ def download_mimi():
     target_path = os.path.join(local_dir, local_filename)
     if os.path.exists(target_path):
         os.remove(target_path)
-    os.rename(path, target_path)
+    shutil.move(path, target_path)
 
     print(f"Mimi model downloaded to {target_path}")
 

@@ -29,12 +29,6 @@ class VoicePersonaManager:
     """
 
     def __init__(self, tts_engine, config_path: Optional[str] = None):
-        """
-        Initialize the manager, configure the TTS engine reference, determine the persona config path, and load personas.
-        
-        Parameters:
-            config_path (Optional[str]): Path to the personas YAML file. If omitted, uses the ELARA_PERSONA_CONFIG environment variable or "config/personas.yaml".
-        """
         self.tts = tts_engine
         self.config_path = Path(config_path or os.getenv("ELARA_PERSONA_CONFIG", "config/personas.yaml"))
         self.personas: Dict[str, VoicePersona] = {}
@@ -43,11 +37,7 @@ class VoicePersonaManager:
         self._load_config()
 
     def _load_config(self):
-        """
-        Load voice persona definitions from the configured YAML file into self.personas.
-        
-        If the configured file does not exist, a default configuration is created. Parses the top-level "personas" mapping and populates the manager's personas dictionary with VoicePersona instances. On error, logs the failure and falls back to a minimal "elara" persona so the system remains usable.
-        """
+        """Load persona definitions from YAML."""
         if not self.config_path.exists():
             self._create_default_config()
 
@@ -74,11 +64,7 @@ class VoicePersonaManager:
             )
 
     def _create_default_config(self):
-        """
-        Create a default persona configuration file at self.config_path.
-        
-        Writes a YAML document defining at least two personas ("elara" and "professional") with fields for voice_sample, style, speed, and text_style. Ensures the parent directory exists and overwrites any existing config file at that path.
-        """
+        """Create default persona configuration."""
         default = {
             "personas": {
                 "elara": {
@@ -100,26 +86,27 @@ class VoicePersonaManager:
             yaml.dump(default, f)
 
     def load_persona(self, name: str) -> VoicePersona:
-        """
-        Activate the named persona and make it the current active persona.
-        
-        If the requested persona is unknown, falls back to the "elara" persona and will create and reload the default configuration if "elara" is also missing. If the TTS engine exposes a `load_voice` method, it is invoked with the persona's name and voice sample path to prepare the voice. The manager's `active_persona` is set to the chosen persona.
-        
-        Parameters:
-            name (str): The identifier of the persona to activate.
-        
-        Returns:
-            VoicePersona: The activated persona configuration.
-        """
+        """Activate a persona, loading voice if needed."""
         if name not in self.personas:
             logger.warning(f"Unknown persona: {name}. Falling back to 'elara'.")
             name = "elara"
             if name not in self.personas:
                  # Ensure 'elara' exists
-                 self._create_default_config()
-                 self._load_config()
+                 try:
+                     self._create_default_config()
+                     self._load_config()
+                 except Exception as e:
+                     logger.error(f"Failed to create default persona config: {e}")
 
-        persona = self.personas[name]
+        persona = self.personas.get(name)
+        if persona is None:
+            logger.error(f"Persona '{name}' could not be loaded. Creating inline fallback.")
+            persona = VoicePersona(
+                name="elara",
+                voice_sample="data/voices/elara_sample.wav",
+                text_style="You are Elara, a helpful AI assistant."
+            )
+            self.personas["elara"] = persona
 
         # Load voice into TTS engine
         if hasattr(self.tts, 'load_voice'):
@@ -131,27 +118,13 @@ class VoicePersonaManager:
         return persona
 
     def get_system_prompt(self) -> str:
-        """
-        Provide the system prompt text for the currently active persona.
-        
-        Returns:
-            The active persona's `text_style` string, or "You are a helpful assistant." if no persona is active.
-        """
+        """Get text style prompt for current persona."""
         if self.active_persona is None:
             return "You are a helpful assistant."
         return self.personas[self.active_persona].text_style
 
     def synthesize(self, text: str, override_persona: Optional[str] = None):
-        """
-        Synthesize speech for the given text using the active persona or a specified override.
-        
-        Parameters:
-            text (str): Text to synthesize.
-            override_persona (Optional[str]): Persona name to use instead of the currently active persona.
-        
-        Returns:
-            The synthesized audio output as produced by the TTS engine, or `None` if the TTS engine does not support synthesis.
-        """
+        """Synthesize with current persona's voice settings."""
         voice = override_persona or self.active_persona or "default"
 
         if hasattr(self.tts, 'synthesize'):
