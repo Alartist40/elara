@@ -12,6 +12,8 @@ All notable changes to the Elara project will be documented in this file.
 - **Standalone RAG Generation**: Tier 2 now includes an extractive fallback for answering questions when Tier 1 is unavailable.
 - **Environment Variable Support**: Key paths and hardware settings can now be configured via `.env` or system variables.
 - **Audio Recorder**: Asynchronous microphone capture using `sounddevice`.
+- **Memory Monitoring Utility**: Added `--monitor` flag and `elara_core/utils.py` for tracking RAM usage against the 4GB target.
+- **Robust Model Downloads**: Added exponential backoff retry logic to `scripts/download_mimi.py`.
 
 ### Changed
 - **Safety Filter**: Implemented double-check logic (pre- and post-cleaning) to prevent safety bypasses.

@@ -58,3 +58,6 @@ graph TD
 ## Persona System
 - **VoicePersonaManager**: Coordinates voice embeddings and text styles.
 - **Voice Conditioning**: Applies persona-specific system prompts to all generation tiers.
+
+## Monitoring & Utilities
+- **Memory Monitor**: `elara_core/utils.py` provides real-time tracking of RAM usage to ensure compliance with the 4GB edge device target.
