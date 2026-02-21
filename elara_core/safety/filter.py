@@ -38,7 +38,12 @@ class SafetyFilter:
 
     def check(self, text: str) -> Tuple[bool, str]:
         """
-        Returns: (allowed, reason_or_cleaned_text)
+        Determine whether given text is allowed by the filter and return either the cleaned text or a block reason.
+        
+        Checks the original text against block patterns, applies flag-based replacements to produce a cleaned version, then re-checks the cleaned text to prevent bypasses.
+        
+        Returns:
+            Tuple[bool, str]: `True` and the cleaned text if no block patterns match; `False` and a string starting with "Blocked: " followed by the block reason if blocked.
         """
         # 1. Check original text
         for pattern, reason in self.block_patterns:

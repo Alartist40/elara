@@ -32,6 +32,14 @@ class MimiTTS:
         device: Optional[str] = None,
         num_codebooks: int = 8,  # 8 of 32 for quality/speed balance
     ):
+        """
+        Initialize MimiTTS instance and configure runtime settings.
+        
+        Parameters:
+            model_path (Optional[str]): Path to the Mimi model file; if omitted, uses ELARA_MIMI_PATH env var or "models/mimi.safetensors".
+            device (Optional[str]): Torch device string (e.g., "cuda", "cpu"); if omitted, uses ELARA_MIMI_DEVICE env var or "cpu".
+            num_codebooks (int): Number of Mimi codebooks to use for synthesis (controls quality vs. speed).
+        """
         self.device = torch.device(device if device else os.getenv("ELARA_MIMI_DEVICE", "cpu"))
         self.num_codebooks = num_codebooks
 
@@ -43,7 +51,15 @@ class MimiTTS:
         self._voice_cache: dict[str, torch.Tensor] = {}
 
     def _load_model(self):
-        """Lazy load Mimi model."""
+        """
+        Load the Mimi codec model into the instance if it is not already loaded.
+        
+        If the model is already present in self._model this is a no-op. Otherwise this attempts to import the moshi loaders, load the Mimi model from self._model_path onto self.device, configure the number of active codebooks, and switch the model to evaluation mode.
+        
+        Raises:
+            RuntimeError: If the moshi package is not installed.
+            Exception: Any exception raised while loading or configuring the model is propagated.
+        """
         if self._model is not None:
             return
 
@@ -66,8 +82,19 @@ class MimiTTS:
 
     def load_voice(self, name: str, audio_path: Union[str, Path]) -> torch.Tensor:
         """
-        Load a voice from reference audio (5-10 seconds of speech).
-        Returns voice embedding for conditioning.
+        Load or create a voice embedding from a reference audio file for conditioning.
+        
+        If the referenced file exists, it is read, (if necessary) resampled to SAMPLE_RATE, converted to mono, encoded by the loaded Mimi model, and the mean of the returned codes is cached and returned as the voice embedding. If the file does not exist, a random initialization tensor is created, cached, and returned. The resulting embedding is cached in self._voice_cache under the provided name.
+        
+        Parameters:
+            name (str): Identifier to store and retrieve the voice embedding in the cache.
+            audio_path (str | Path): Path to a reference speech audio file; missing files trigger a random initialization.
+        
+        Returns:
+            torch.Tensor: Voice embedding tensor with shape [1, num_codebooks, 1].
+        
+        Raises:
+            ImportError: If the optional audio I/O dependency is not available when attempting to load an existing file.
         """
         self._load_model()
 
@@ -113,7 +140,16 @@ class MimiTTS:
         chunk_callback: Optional[callable] = None,
     ) -> np.ndarray:
         """
-        Synthesize text to speech.
+        Synthesize speech audio from input text using the configured Mimi model and voice embedding.
+        
+        Parameters:
+            text (str): Input text to synthesize.
+            voice (str): Name of the voice embedding to use; will be loaded or initialized if not cached.
+            speed (float): Relative speaking speed (affects an internal frame estimation).
+            chunk_callback (callable, optional): If provided, called repeatedly with successive NumPy arrays of PCM samples of length FRAME_SIZE as they are produced.
+        
+        Returns:
+            pcm (np.ndarray): 1-D NumPy array of PCM audio samples at SAMPLE_RATE.
         """
         self._load_model()
 
@@ -152,12 +188,32 @@ class MimiTTS:
         return pcm
 
     def _estimate_frames(self, text: str, speed: float) -> int:
-        """Heuristic for number of audio frames."""
+        """
+        Estimate the number of audio frames required to synthesize the given text.
+        
+        Uses a heuristic based on text length and a speech-rate multiplier.
+        
+        Parameters:
+            text (str): Input text to synthesize.
+            speed (float): Speech rate multiplier; values >1.0 produce faster speech, values <1.0 produce slower speech.
+        
+        Returns:
+            int: Number of audio frames to generate (at least 1).
+        """
         duration = len(text) / (10.0 * speed) # Adjusted for faster speech estimation
         return max(1, int(duration * self.SAMPLE_RATE / self.HOP_LENGTH))
 
     def _generate_prosody(self, text: str, num_frames: int) -> torch.Tensor:
-        """Generate simple prosodic variation."""
+        """
+        Create a prosodic contour tensor for a sequence of frames based on punctuation in the input text.
+        
+        Parameters:
+        	text (str): Input text used to select the contour shape.
+        	num_frames (int): Number of time frames for the contour.
+        
+        Returns:
+        	contour (torch.Tensor): Tensor of shape [1, num_codebooks, num_frames] with prosodic variation values.
+        """
         t = torch.linspace(0, 1, num_frames, device=self.device)
 
         if '?' in text:
@@ -171,11 +227,28 @@ class MimiTTS:
         return contour
 
     def save_voice(self, name: str, path: str):
+        """
+        Persist a loaded voice embedding to disk.
+        
+        Parameters:
+            name (str): Name of the cached voice to save.
+            path (str): Filesystem path to write the saved tensor to.
+        
+        Raises:
+            ValueError: If the named voice is not present in the voice cache.
+        """
         if name not in self._voice_cache:
             raise ValueError(f"Voice '{name}' not loaded")
         torch.save(self._voice_cache[name], path)
 
     def load_voice_cached(self, name: str, path: str):
+        """
+        Store a previously saved voice embedding in the instance cache under the given name.
+        
+        Parameters:
+            name (str): Key to associate with the loaded voice embedding in the internal cache.
+            path (str): Filesystem path to a PyTorch-saved tensor containing the voice embedding.
+        """
         self._voice_cache[name] = torch.load(path, map_location=self.device)
 
 class StreamingMimiTTS(MimiTTS):
@@ -187,6 +260,19 @@ class StreamingMimiTTS(MimiTTS):
         voice: str = "default",
         speed: float = 1.0,
     ):
+        """
+        Stream synthesized audio for the given text as timed PCM chunks.
+        
+        Yields successive PCM chunks as 1-D NumPy arrays of samples; each chunk contains up to FRAME_SIZE samples. Between yielding chunks the coroutine pauses approximately 0.08 seconds to simulate real-time playback.
+        
+        Parameters:
+            text (str): Text to synthesize.
+            voice (str): Voice identifier to use for conditioning.
+            speed (float): Relative speaking speed; higher values produce fewer frames.
+        
+        Returns:
+            Successive PCM chunks as 1-D NumPy arrays of samples (each chunk length <= FRAME_SIZE).
+        """
         import asyncio
         pcm = self.synthesize(text, voice, speed)
 

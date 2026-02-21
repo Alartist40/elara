@@ -21,6 +21,19 @@ class Tier2Engine:
         docs_path: Optional[str] = None,
         model_name: str = "all-MiniLM-L6-v2",  # 22MB embedding model
     ):
+        """
+        Initialize the Tier2Engine, preparing embedding encoder, FAISS index, and document store.
+        
+        Parameters:
+        	tier1_engine (Optional[Any]): Optional generator to delegate text generation to.
+        	index_path (Optional[str]): Path to the FAISS index file; if None, resolved from ELARA_INDEX_PATH or defaults to "data/faiss.index".
+        	docs_path (Optional[str]): Path to the documents JSON file; if None, resolved from ELARA_DOCS_PATH or defaults to "data/documents.json".
+        	model_name (str): SentenceTransformer model name to use for embeddings.
+        
+        Notes:
+        	- Attempts to load the specified SentenceTransformer model; on failure, `self.encoder` is set to `None` and a fallback embedding dimension is used.
+        	- If both index and document files exist at the resolved paths, the FAISS index and documents are loaded; otherwise an empty FAISS IndexFlatIP and an empty documents list are created.
+        """
         self.generator = tier1_engine
 
         # Embedding model (CPU, fast)
@@ -78,7 +91,14 @@ class Tier2Engine:
             json.dump(self.documents, f, ensure_ascii=False)
 
     def retrieve(self, query: str, k: int = 3) -> List[str]:
-        """Get top-k relevant documents."""
+        """
+        Retrieve the top relevant documents for a query.
+        
+        If no documents are stored or the encoder is not initialized, returns an empty list.
+        
+        Returns:
+        	A list of up to `k` documents ranked by relevance for the given query; an empty list if no relevant documents are found.
+        """
         if len(self.documents) == 0 or self.encoder is None:
             return []
 
@@ -97,7 +117,18 @@ class Tier2Engine:
         ]
 
     def generate_standalone(self, query: str, max_tokens: int = 512) -> str:
-        """Use a lightweight local model when tier1 is unavailable."""
+        """
+        Produce a concise answer using the most relevant retrieved document when no external generator is configured.
+        
+        If up to three documents are retrieved, return the first sentence of the top-ranked document (including a trailing period). If no documents are found, return a default message indicating lack of information.
+        
+        Parameters:
+        	query (str): The user query used to retrieve relevant documents.
+        	max_tokens (int): Maximum token budget for the generated answer; currently unused and reserved for compatibility.
+        
+        Returns:
+        	A short answer string: the first sentence of the most relevant document if available, otherwise a default "no information" message.
+        """
         docs = self.retrieve(query, k=3)
         if not docs:
             return "I don't have relevant information to answer that."
@@ -108,6 +139,19 @@ class Tier2Engine:
         return sentences[0] + '.' if sentences else best_doc
 
     def generate(self, query: str, max_tokens: int = 512, system_prompt: Optional[str] = None) -> str:
+        """
+        Generate an answer to a query using retrieved documents and an underlying generator.
+        
+        If relevant documents are found, they are included as context in the prompt sent to the generator; otherwise the raw query is used. If no generator is configured, a standalone fallback is used that returns a concise answer from the most relevant document.
+        
+        Parameters:
+            query (str): The user question to answer.
+            max_tokens (int): Maximum number of tokens for the generated answer.
+            system_prompt (Optional[str]): Optional system-level instruction passed through to the underlying generator.
+        
+        Returns:
+            str: The generated answer.
+        """
         if self.generator is None:
             logging.warning("Tier2Engine: No generator available. Using standalone fallback.")
             return self.generate_standalone(query, max_tokens)
@@ -131,7 +175,16 @@ Answer:"""
         return self.generator.generate(prompt, max_tokens, system_prompt=system_prompt)
 
     def has_relevant_docs(self, query: str, threshold: float = 0.3) -> bool:
-        """Check if query has relevant documents (for routing)."""
+        """
+        Determine whether there exists a document relevant to the given query above the similarity threshold.
+        
+        Parameters:
+            query (str): Query text to match against stored documents.
+            threshold (float): Minimum cosine-similarity score required to consider a document relevant (default 0.3).
+        
+        Returns:
+            bool: `True` if the top retrieved document's similarity score is greater than `threshold`, `False` otherwise. Returns `False` when no documents are stored or the encoder is unavailable.
+        """
         if len(self.documents) == 0 or self.encoder is None:
             return False
 
