@@ -2,6 +2,7 @@ import faiss
 import numpy as np
 from sentence_transformers import SentenceTransformer
 import json
+import functools
 import logging
 from pathlib import Path
 from typing import List, Optional, Any
@@ -76,14 +77,27 @@ class Tier2Engine:
         with open(self.docs_path, "w", encoding="utf-8") as f:
             json.dump(self.documents, f, ensure_ascii=False)
 
+    @functools.lru_cache(maxsize=16)
+    def _get_cached_embedding(self, query: str) -> Optional[np.ndarray]:
+        """
+        Memoized encoding to avoid redundant BERT passes during routing/generation.
+        """
+        if self.encoder is None:
+            return None
+        # Encode with explicit numpy conversion
+        emb = self.encoder.encode([query], convert_to_numpy=True)
+        faiss.normalize_L2(emb)
+        return emb
+
     def retrieve(self, query: str, k: int = 3) -> List[str]:
         """Get top-k relevant documents."""
-        if len(self.documents) == 0 or self.encoder is None:
+        if len(self.documents) == 0:
             return []
 
-        # Encode query
-        query_emb = self.encoder.encode([query])
-        faiss.normalize_L2(query_emb)
+        # Use cached embedding to avoid redundant encoding overhead
+        query_emb = self._get_cached_embedding(query)
+        if query_emb is None:
+            return []
 
         # Search
         scores, indices = self.index.search(query_emb, k)
@@ -128,11 +142,14 @@ Answer:"""
 
     def has_relevant_docs(self, query: str, threshold: float = 0.3) -> bool:
         """Check if query has relevant documents (for routing)."""
-        if len(self.documents) == 0 or self.encoder is None:
+        if len(self.documents) == 0:
             return False
 
-        query_emb = self.encoder.encode([query])
-        faiss.normalize_L2(query_emb)
+        # Use cached embedding to avoid redundant encoding overhead
+        query_emb = self._get_cached_embedding(query)
+        if query_emb is None:
+            return False
+
         scores, _ = self.index.search(query_emb, 1)
 
         return scores[0][0] > threshold
