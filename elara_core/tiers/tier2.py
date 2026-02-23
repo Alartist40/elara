@@ -4,6 +4,7 @@ import os
 from sentence_transformers import SentenceTransformer
 import json
 import logging
+import functools
 from pathlib import Path
 from typing import List, Optional, Any
 
@@ -31,6 +32,9 @@ class Tier2Engine:
             print(f"Error loading embedding model: {e}")
             self.encoder = None
             dim = 384 # Fallback
+
+        # Instance-specific cache to avoid memory leaks with @lru_cache on methods
+        self._setup_cache()
 
         # FAISS index (pre-built or empty)
         self.index_path = Path(index_path or os.getenv("ELARA_INDEX_PATH", "data/faiss.index"))
@@ -77,14 +81,28 @@ class Tier2Engine:
         with open(self.docs_path, "w", encoding="utf-8") as f:
             json.dump(self.documents, f, ensure_ascii=False)
 
+    def _setup_cache(self):
+        """Initialize instance-specific query embedding cache."""
+        encoder = self.encoder
+        @functools.lru_cache(maxsize=128)
+        def get_emb(query: str):
+            if encoder is None:
+                return None
+            # Encode and normalize
+            emb = encoder.encode([query], convert_to_numpy=True).astype(np.float32)
+            faiss.normalize_L2(emb)
+            return emb
+        self._get_cached_embedding = get_emb
+
     def retrieve(self, query: str, k: int = 3) -> List[str]:
         """Get top-k relevant documents."""
         if len(self.documents) == 0 or self.encoder is None:
             return []
 
-        # Encode query
-        query_emb = self.encoder.encode([query])
-        faiss.normalize_L2(query_emb)
+        # Get cached embedding
+        query_emb = self._get_cached_embedding(query)
+        if query_emb is None:
+            return []
 
         # Search
         scores, indices = self.index.search(query_emb, k)
@@ -135,8 +153,10 @@ Answer:"""
         if len(self.documents) == 0 or self.encoder is None:
             return False
 
-        query_emb = self.encoder.encode([query])
-        faiss.normalize_L2(query_emb)
+        query_emb = self._get_cached_embedding(query)
+        if query_emb is None:
+            return False
+
         scores, _ = self.index.search(query_emb, 1)
 
         return scores[0][0] > threshold
