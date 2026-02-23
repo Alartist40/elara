@@ -1,13 +1,16 @@
 """Simple tier selection. No ML, no complexity."""
 
 class TierRouter:
+    # Tier 3 triggers: tool keywords or explicit complexity
+    TOOL_KEYWORDS = ("search", "look up", "find", "weather", "calculate")
+
     def __init__(self, tier2_engine):
         self.tier2 = tier2_engine
 
     def select_tier(self, query: str) -> int:
-        # Tier 3 triggers: tool keywords or explicit complexity
-        tool_keywords = ["search", "look up", "find", "weather", "calculate"]
-        if any(kw in query.lower() for kw in tool_keywords):
+        # Bolt: Lowercase query once to avoid redundant allocations in keyword check
+        lower_query = query.lower()
+        if any(kw in lower_query for kw in self.TOOL_KEYWORDS):
             return 3
 
         # Tier 2: has relevant documents
