@@ -92,13 +92,7 @@ class Tier2Engine:
             emb = encoder.encode([query], convert_to_numpy=True).astype(np.float32)
             faiss.normalize_L2(emb)
             return emb
-
-        def get_cached_with_copy(query: str):
-            # Defensive fix: return a copy on cache hit to prevent accidental mutation of internal state
-            emb = get_emb(query)
-            return emb.copy() if emb is not None else None
-
-        self._get_cached_embedding = get_cached_with_copy
+        self._get_cached_embedding = get_emb
 
     def retrieve(self, query: str, k: int = 3) -> List[str]:
         """Get top-k relevant documents."""
