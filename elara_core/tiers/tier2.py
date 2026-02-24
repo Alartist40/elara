@@ -1,8 +1,10 @@
 import faiss
 import numpy as np
+import os
 from sentence_transformers import SentenceTransformer
 import json
 import logging
+import functools
 from pathlib import Path
 from typing import List, Optional, Any
 
@@ -16,13 +18,11 @@ class Tier2Engine:
     def __init__(
         self,
         tier1_engine: Optional[Any] = None,  # Reuse for generation
-        index_path: str = "data/faiss.index",
-        docs_path: str = "data/documents.json",
+        index_path: Optional[str] = None,
+        docs_path: Optional[str] = None,
         model_name: str = "all-MiniLM-L6-v2",  # 22MB embedding model
     ):
         self.generator = tier1_engine
-        # Per-instance query embedding cache (avoids redundant BERT passes)
-        self._embedding_cache: dict[str, np.ndarray] = {}
 
         # Embedding model (CPU, fast)
         try:
@@ -33,12 +33,15 @@ class Tier2Engine:
             self.encoder = None
             dim = 384 # Fallback
 
+        # Instance-specific cache to avoid memory leaks with @lru_cache on methods
+        self._setup_cache()
+
         # FAISS index (pre-built or empty)
-        self.index_path = Path(index_path)
-        self.docs_path = Path(docs_path)
+        self.index_path = Path(index_path or os.getenv("ELARA_INDEX_PATH", "data/faiss.index"))
+        self.docs_path = Path(docs_path or os.getenv("ELARA_DOCS_PATH", "data/documents.json"))
 
         if self.index_path.exists() and self.docs_path.exists():
-            self.index = faiss.read_index(str(index_path))
+            self.index = faiss.read_index(str(self.index_path))
             try:
                 with open(self.docs_path, encoding="utf-8") as f:
                     self.documents = json.load(f)
@@ -78,28 +81,31 @@ class Tier2Engine:
         with open(self.docs_path, "w", encoding="utf-8") as f:
             json.dump(self.documents, f, ensure_ascii=False)
 
-    def _get_cached_embedding(self, query: str) -> Optional[np.ndarray]:
-        """
-        Memoized encoding to avoid redundant BERT passes during routing/generation.
-        """
-        if query in self._embedding_cache:
-            return self._embedding_cache[query].copy()
+    def _setup_cache(self):
+        """Initialize instance-specific query embedding cache."""
+        encoder = self.encoder
+        @functools.lru_cache(maxsize=128)
+        def get_emb(query: str):
+            if encoder is None:
+                return None
+            # Encode and normalize
+            emb = encoder.encode([query], convert_to_numpy=True).astype(np.float32)
+            faiss.normalize_L2(emb)
+            return emb
 
-        if self.encoder is None:
-            return None
+        def get_cached_with_copy(query: str):
+            # Defensive fix: return a copy on cache hit to prevent accidental mutation of internal state
+            emb = get_emb(query)
+            return emb.copy() if emb is not None else None
 
-        # Encode with explicit numpy conversion
-        emb = self.encoder.encode([query], convert_to_numpy=True)
-        faiss.normalize_L2(emb)
-        self._embedding_cache[query] = emb
-        return emb.copy()
+        self._get_cached_embedding = get_cached_with_copy
 
     def retrieve(self, query: str, k: int = 3) -> List[str]:
         """Get top-k relevant documents."""
-        if len(self.documents) == 0:
+        if len(self.documents) == 0 or self.encoder is None:
             return []
 
-        # Use cached embedding to avoid redundant encoding overhead
+        # Get cached embedding
         query_emb = self._get_cached_embedding(query)
         if query_emb is None:
             return []
@@ -114,18 +120,21 @@ class Tier2Engine:
             if i != -1 and i < len(self.documents)
         ]
 
-    def generate(self, query: str, max_tokens: int = 512) -> str:
-        if self.generator is None:
-            logging.warning("Tier2Engine: returning raw documents — no generator available.")
-            docs = self.retrieve(query, k=3)
-            if not docs:
-                return "Error: No generator available and no documents retrieved."
+    def generate_standalone(self, query: str) -> str:
+        """Extractive retrieval fallback used when tier1 is unavailable. max_tokens does not apply."""
+        docs = self.retrieve(query, k=3)
+        if not docs:
+            return "I don't have relevant information to answer that."
 
-            doc_lines = chr(10).join(
-                f"{i+1}. {d[:200]}{'...' if len(d) > 200 else ''}"
-                for i, d in enumerate(docs)
-            )
-            return f"Retrieved documents (no generator available):\n\n{doc_lines}\n\nQuery: {query}"
+        # Simple extractive answer - pick most relevant sentence
+        best_doc = docs[0]
+        sentences = best_doc.split('.')
+        return sentences[0] + '.' if sentences else best_doc
+
+    def generate(self, query: str, max_tokens: int = 512, system_prompt: Optional[str] = None) -> str:
+        if self.generator is None:
+            logging.warning("Tier2Engine: No generator available. Using standalone fallback.")
+            return self.generate_standalone(query)
 
         # Retrieve context
         docs = self.retrieve(query, k=3)
@@ -143,14 +152,13 @@ Answer:"""
             # No relevant docs, fall back to Tier 1 style
             prompt = query
 
-        return self.generator.generate(prompt, max_tokens)
+        return self.generator.generate(prompt, max_tokens, system_prompt=system_prompt)
 
     def has_relevant_docs(self, query: str, threshold: float = 0.3) -> bool:
         """Check if query has relevant documents (for routing)."""
-        if len(self.documents) == 0:
+        if len(self.documents) == 0 or self.encoder is None:
             return False
 
-        # Use cached embedding to avoid redundant encoding overhead
         query_emb = self._get_cached_embedding(query)
         if query_emb is None:
             return False
