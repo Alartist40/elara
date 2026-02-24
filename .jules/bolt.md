@@ -9,11 +9,3 @@
 ## 2025-01-31 - Redundant computations in generator expressions
 **Learning:** Calling a string manipulation method like `.lower()` inside a generator expression passed to `any()` or `all()` can result in that method being called multiple times (once for each iteration until short-circuit).
 **Action:** Always hoist common computations (like lowercasing the search target) outside of the generator expression to ensure they are performed only once.
-
-## 2025-01-31 - Redundant Safety Passes
-**Learning:** Re-checking cleaned text against safety rules is essential for preventing bypasses, but is computationally redundant if the cleaning process (regex flags) didn't actually change the input.
-**Action:** Always wrap safety re-checks in a conditional that verifies if the text was modified.
-
-## 2025-01-31 - Memory Efficiency with Broadcasting
-**Learning:** Using `.repeat()` or `.expand()` to align tensor shapes for element-wise operations (like adding a voice bias to codes) creates large, unnecessary intermediate allocations.
-**Action:** Leverage NumPy/PyTorch broadcasting rules to perform operations between differently shaped tensors (e.g., `[1, K, 1]` + `[1, 1, N]`) without manual replication.

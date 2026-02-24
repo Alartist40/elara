@@ -51,10 +51,8 @@ class SafetyFilter:
             cleaned = pattern.sub(replacement, cleaned)
 
         # 3. Re-check cleaned text (safety bypass prevention)
-        # Bolt: Only re-check if cleaning actually changed the text
-        if cleaned != text:
-            for pattern, reason in self.block_patterns:
-                if pattern.search(cleaned):
-                    return False, f"Blocked: {reason}"
+        for pattern, reason in self.block_patterns:
+            if pattern.search(cleaned):
+                return False, f"Blocked: {reason}"
 
         return True, cleaned
