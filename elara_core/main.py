@@ -21,6 +21,7 @@ def main():
     parser.add_argument("--no-tts-mimi", action="store_true", default=False, help="Disable Mimi neural TTS")
     parser.add_argument("--tts-nemo", action="store_true", default=None, help="Force NeMo TTS (requires GPU)")
     parser.add_argument("--tts-cpu", action="store_true", help="Force CPU TTS (pyttsx3)")
+    parser.add_argument("--voice-debug", action="store_true", help="Print which TTS engine is active")
     parser.add_argument("--monitor", action="store_true", help="Monitor memory usage")
     args = parser.parse_args()
 
@@ -36,6 +37,14 @@ def main():
     from elara_core.voice.gateway import VoiceGateway
     from elara_core.safety.filter import SafetyFilter
     from elara_core.tools.router import ToolRouter
+    from elara_core.utils import check_memory
+
+    # Pre-flight memory check
+    mem_status = check_memory()
+    if not mem_status['can_load_model']:
+        print(f"CRITICAL: Memory too low to start ({mem_status['used_gb']:.1f}GB used).")
+        if not args.interactive: # Exit if single-shot
+             sys.exit(1)
 
     tier1 = Tier1Engine()
     tier2 = Tier2Engine(tier1)
@@ -57,6 +66,12 @@ def main():
         tts_use_mimi=not (args.no_tts_mimi or args.tts_nemo or args.tts_cpu),
         tts_use_nemo=args.tts_nemo,
     )
+
+    if args.voice_debug:
+        stats = voice.get_stats()
+        engine = "Mimi (Neural)" if stats['tts_use_mimi'] else ("NeMo" if stats['tts_use_nemo'] else "CPU (pyttsx3)")
+        print(f"[VOICE DEBUG] Active TTS Engine: {engine}")
+
     safety = SafetyFilter()
     tools = ToolRouter()
 
@@ -146,11 +161,24 @@ async def voice_conversation_mode(args, tier1, tier2, tier3, router, safety, too
     def on_audio(chunk: np.ndarray):
         if audio_stream:
             # Using sounddevice OutputStream for gapless playback
-            audio_stream.write(chunk.reshape(-1, 1).astype(np.float32))
+            try:
+                audio_stream.write(chunk.reshape(-1, 1).astype(np.float32))
+            except Exception as e:
+                logging.error(f"Audio write error: {e}")
+
+    def on_interrupt():
+        if audio_stream:
+            try:
+                audio_stream.abort()
+                audio_stream.start()
+                logging.info("Audio buffer flushed on interruption")
+            except Exception as e:
+                logging.error(f"Audio flush error: {e}")
 
     handler.on_user_text = on_user
     handler.on_assistant_text = on_assistant
     handler.on_audio_out = on_audio
+    handler.on_interrupt = on_interrupt
 
     print("Voice conversation started. Speak naturally (Ctrl+C to exit)...")
     await handler.start()
@@ -184,6 +212,12 @@ def process_input(user_input, tier1, tier2, tier3, router, safety, tools, system
     Returns:
         str: The assistant's final response text.
     """
+    # 0. Memory Check
+    from elara_core.utils import check_memory
+    mem_status = check_memory()
+    if not mem_status['can_process_request']:
+        return "Error: System memory is critically low. Please try again later or restart the application."
+
     # 1. Safety Pre-check: Thread cleaned input through the pipeline
     allowed, scrubbed_input = safety.check(user_input)
     if not allowed:
