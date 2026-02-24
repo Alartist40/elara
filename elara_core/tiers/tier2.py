@@ -4,6 +4,7 @@ import os
 from sentence_transformers import SentenceTransformer
 import json
 import logging
+import functools
 from pathlib import Path
 from typing import List, Optional, Any
 
@@ -31,6 +32,9 @@ class Tier2Engine:
             print(f"Error loading embedding model: {e}")
             self.encoder = None
             dim = 384 # Fallback
+
+        # Instance-specific cache to avoid memory leaks with @lru_cache on methods
+        self._setup_cache()
 
         # FAISS index (pre-built or empty)
         self.index_path = Path(index_path or os.getenv("ELARA_INDEX_PATH", "data/faiss.index"))
@@ -77,14 +81,43 @@ class Tier2Engine:
         with open(self.docs_path, "w", encoding="utf-8") as f:
             json.dump(self.documents, f, ensure_ascii=False)
 
+    def _setup_cache(self):
+        """Initialize instance-specific query embedding cache."""
+        encoder = self.encoder
+        @functools.lru_cache(maxsize=128)
+        def get_emb(query: str):
+            if encoder is None:
+                return None
+            # Encode and normalize
+            emb = encoder.encode([query], convert_to_numpy=True).astype(np.float32)
+            faiss.normalize_L2(emb)
+            return emb
+
+        def get_emb_safe(query: str):
+            res = get_emb(query)
+            # Return a copy to prevent callers from corrupting the cache
+            return res.copy() if res is not None else None
+
+        self._get_cached_embedding = get_emb_safe
+
     def retrieve(self, query: str, k: int = 3) -> List[str]:
-        """Get top-k relevant documents."""
+        """
+        Get top-k relevant documents for a query.
+
+        Parameters:
+            query (str): The search query.
+            k (int): Number of documents to retrieve.
+
+        Returns:
+            List[str]: List of relevant document texts.
+        """
         if len(self.documents) == 0 or self.encoder is None:
             return []
 
-        # Encode query
-        query_emb = self.encoder.encode([query])
-        faiss.normalize_L2(query_emb)
+        # Get cached embedding
+        query_emb = self._get_cached_embedding(query)
+        if query_emb is None:
+            return []
 
         # Search
         scores, indices = self.index.search(query_emb, k)
@@ -131,12 +164,26 @@ Answer:"""
         return self.generator.generate(prompt, max_tokens, system_prompt=system_prompt)
 
     def has_relevant_docs(self, query: str, threshold: float = 0.3) -> bool:
-        """Check if query has relevant documents (for routing)."""
+        """
+        Check if the query has relevant documents in the index.
+
+        This returns True if the highest similarity score exceeds the threshold,
+        and False otherwise.
+
+        Parameters:
+            query (str): The search query.
+            threshold (float): Similarity threshold (0.0 to 1.0).
+
+        Returns:
+            bool: True if relevant documents are found, False otherwise.
+        """
         if len(self.documents) == 0 or self.encoder is None:
             return False
 
-        query_emb = self.encoder.encode([query])
-        faiss.normalize_L2(query_emb)
+        query_emb = self._get_cached_embedding(query)
+        if query_emb is None:
+            return False
+
         scores, _ = self.index.search(query_emb, 1)
 
         return scores[0][0] > threshold
