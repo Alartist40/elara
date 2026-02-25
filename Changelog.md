@@ -2,7 +2,7 @@
 
 All notable changes to the Elara project will be documented in this file.
 
-## [2.2.1-perf] - 2026-02-27
+## [2.2.1-perf] - 2026-02-25
 
 ### Added
 - **MimiTTS Test Suite**: Added `tests/test_mimi_tts.py` for comprehensive validation of neural synthesis.

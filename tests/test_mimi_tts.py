@@ -39,7 +39,7 @@ class TestMimiTTS(unittest.TestCase):
         args, _ = self.mock_model.decode.call_args
         codes = args[0]
 
-        expected_codes = (voice_emb + variation).clamp(0, 2047).long()
+        expected_codes = (voice_emb + variation).clamp(0, 2047).long().to(codes.device)
         torch.testing.assert_close(codes, expected_codes)
 
         self.assertEqual(codes.shape, (1, 8, 100))
