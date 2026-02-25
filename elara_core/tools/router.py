@@ -8,6 +8,15 @@ from typing import Optional
 
 class ToolResult:
     def __init__(self, name: str, output: str, success: bool, duration_ms: float):
+        """
+        Initialize a ToolResult with the provided execution details.
+        
+        Parameters:
+            name (str): Name of the tool.
+            output (str): Textual output produced by the tool.
+            success (bool): Whether the tool execution succeeded.
+            duration_ms (float): Execution duration in milliseconds.
+        """
         self.name = name
         self.output = output
         self.success = success

@@ -26,6 +26,20 @@ class DuplexVoiceHandler:
         sample_rate: int = 16000, # STT usually expects 16kHz
         use_streaming: bool = True,
     ):
+        """
+        Initialize the duplex voice conversation handler with speech recognition, response processing, text-to-speech, and persona management; configure runtime settings, internal state, and optional callbacks.
+        
+        Parameters:
+            stt_engine: Speech-to-text engine instance used for transcribing captured audio.
+            process_callback: Callable that accepts a user-transcribed string and returns the assistant's response text.
+            tts_engine: Text-to-speech engine used to synthesize assistant audio output.
+            persona_manager: Manager or configuration object that controls assistant persona or context.
+            sample_rate (int): Audio sample rate for incoming PCM frames (default 16000). STT engines commonly expect 16 kHz.
+            use_streaming (bool): If True, prefer streaming TTS output when supported by the TTS engine; otherwise use full-buffer synthesis.
+        
+        Behavior:
+            Stores provided engines and callbacks, sets frame sizing from MimiTTS.FRAME_SIZE, initializes activity/speaking flags, the current utterance buffer, silence counters, and placeholder attributes for optional runtime callbacks (on_user_text, on_assistant_text, on_audio_out, on_interrupt).
+        """
         self.stt = stt_engine
         self.process_callback = process_callback
         self.tts = tts_engine

@@ -91,7 +91,13 @@ def audio_to_wav_bytes(
 def wav_bytes_to_audio(
     wav_bytes: bytes,
 ) -> tuple[np.ndarray, int]:
-    """Convert WAV bytes to numpy array and sample rate."""
+    """
+    Convert WAV-encoded bytes into a NumPy float32 audio array and its sample rate.
+    
+    Returns:
+        audio (np.ndarray): Audio samples as a float32 array. Shape is (n,) for mono or (n, channels) for multi-channel.
+        sr (int): Sample rate in Hertz.
+    """
     try:
         import soundfile as sf
         audio, sr = sf.read(io.BytesIO(wav_bytes))

@@ -95,7 +95,15 @@ class WhisperSTT:
     def transcribe_with_timestamps(
         self, audio_input: Union[str, bytes]
     ) -> list[dict[str, Any]]:
-        """Return transcribed segments with timestamps."""
+        """
+        Transcribe audio and produce timestamped segments.
+        
+        Parameters:
+            audio_input (str | bytes): Path to an audio file or raw audio bytes. If raw bytes are provided, they are converted to a temporary 16 kHz WAV file before transcription.
+        
+        Returns:
+            list[dict[str, Any]]: A list of segment dictionaries produced by the model, each containing timing and text information (for example: `start`, `end`, `text`, and word-level timestamps when available).
+        """
         self._ensure_loaded()
 
         if isinstance(audio_input, bytes):
@@ -111,7 +119,23 @@ class WhisperSTT:
         return result["segments"]
 
     def _bytes_to_audio(self, audio_bytes: bytes) -> np.ndarray:
-        """Convert audio bytes to numpy array (16kHz mono float32)."""
+        """
+        Convert raw audio bytes into a 16 kHz mono float32 NumPy array.
+        
+        Parameters:
+            audio_bytes (bytes): Raw audio data in a format readable by soundfile (for example WAV or FLAC).
+        
+        Returns:
+            np.ndarray: Mono audio samples as float32 at 16000 Hz.
+        
+        Notes:
+            - If the input has multiple channels, channels are averaged to produce mono.
+            - If the input sample rate is not 16000 Hz, the method attempts to resample to 16000 Hz using librosa.
+              If librosa is not available, a warning is issued and the original sample-rate data is returned cast to float32.
+        
+        Raises:
+            ImportError: If the soundfile library is not installed.
+        """
         import io
 
         try:
@@ -135,7 +159,16 @@ class WhisperSTT:
         return audio.astype(np.float32)
 
     def get_info(self) -> dict[str, Any]:
-        """Return model information."""
+        """
+        Provide metadata about the current Whisper model instance.
+        
+        Returns:
+            info (dict[str, Any]): Dictionary with the following keys:
+                - model_size (str): Configured model size (one of AVAILABLE_MODELS).
+                - device (str): Resolved device string (e.g., "cuda" or "cpu").
+                - loaded (bool): `True` if the model has been loaded, `False` otherwise.
+                - last_duration_s (float): Duration in seconds of the last processed audio.
+        """
         return {
             "model_size": self.model_size,
             "device": self.device,
