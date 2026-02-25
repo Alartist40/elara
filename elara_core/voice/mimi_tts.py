@@ -120,18 +120,18 @@ class MimiTTS:
         chunk_callback: Optional[callable] = None,
     ) -> np.ndarray:
         """
-        Synthesize the given text into a waveform conditioned on a voice embedding.
+        Synthesize speech audio from input text using a cached voice embedding and simple prosodic variation.
         
-        Generates a prosodic code sequence from the input text, combines it with a cached or newly initialized voice embedding, decodes the resulting codes into PCM audio, optionally streams the audio in fixed-size chunks via a callback, and returns the full waveform.
+        If the named voice is not present in the internal cache, the method attempts to load a saved embedding from the ELARA_VOICES_DIR (default data/voices); if not found, a random voice embedding is initialized and cached. The generated audio may be delivered incrementally via chunk_callback.
         
         Parameters:
             text (str): Input text to synthesize.
-            voice (str): Name of the voice conditioning to use; if not cached, attempts to load from ELARA_VOICES_DIR or creates a random embedding.
-            speed (float): Playback speed multiplier used when estimating duration.
-            chunk_callback (Optional[callable]): If provided, called repeatedly with consecutive chunks of the output PCM of length FRAME_SIZE.
+            voice (str): Name of the voice embedding to use (cached or loaded by name).
+            speed (float): Relative speaking speed multiplier used to estimate output duration.
+            chunk_callback (callable, optional): If provided, called repeatedly with consecutive PCM chunks (1-D NumPy arrays) of size FRAME_SIZE as they are produced.
         
         Returns:
-            np.ndarray: 1-D NumPy array of PCM samples (sample rate SAMPLE_RATE) containing the complete synthesized waveform.
+            np.ndarray: 1-D NumPy array containing the synthesized PCM audio samples.
         """
         self._load_model()
 
