@@ -2,7 +2,6 @@ import re
 import yaml
 import logging
 from pathlib import Path
-from typing import Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +35,7 @@ class SafetyFilter:
             for rule in self.rules.get("flag", [])
         ]
 
-    def check(self, text: str) -> Tuple[bool, str]:
+    def check(self, text: str) -> tuple[bool, str]:
         """
         Returns: (allowed, reason_or_cleaned_text)
         """

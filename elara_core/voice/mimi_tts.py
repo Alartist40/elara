@@ -7,7 +7,7 @@ import torch
 import numpy as np
 import os
 from pathlib import Path
-from typing import Optional, Union, List
+from typing import Optional, Union
 import logging
 
 logger = logging.getLogger(__name__)

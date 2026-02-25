@@ -5,7 +5,7 @@ Runs locally, no API calls. Supports multiple model sizes.
 
 import torch
 import numpy as np
-from typing import Union, Optional, List, Dict, Any
+from typing import Union, Optional, Any
 from pathlib import Path
 import warnings
 
@@ -94,7 +94,7 @@ class WhisperSTT:
 
     def transcribe_with_timestamps(
         self, audio_input: Union[str, bytes]
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Return transcribed segments with timestamps."""
         self._ensure_loaded()
 
@@ -134,7 +134,7 @@ class WhisperSTT:
 
         return audio.astype(np.float32)
 
-    def get_info(self) -> Dict[str, Any]:
+    def get_info(self) -> dict[str, Any]:
         """Return model information."""
         return {
             "model_size": self.model_size,

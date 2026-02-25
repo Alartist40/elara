@@ -1,6 +1,6 @@
 import os
 from llama_cpp import Llama
-from typing import Dict, Any, Optional
+from typing import Optional, Any
 
 class Tier1Engine:
     """
@@ -62,7 +62,7 @@ Be concise, accurate, and helpful. If unsure, say so."""
 
         return output["choices"][0]["message"]["content"].strip()
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         if self.model is None:
             return {"status": "not_loaded"}
 

@@ -5,7 +5,7 @@ Optimized for lazy loading.
 
 import numpy as np
 from pathlib import Path
-from typing import Union, Optional, Dict, Any
+from typing import Union, Optional, Any
 
 from elara_core.voice.stt import WhisperSTT
 from elara_core.voice.tts import ElaraTTS
@@ -105,7 +105,7 @@ class VoiceGateway:
             for i in range(0, len(pcm), frame_size):
                 yield pcm[i:i+frame_size]
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         return {
             "stt_loaded": self.stt is not None,
             "tts_loaded": self.tts is not None or self._mimi_tts is not None,

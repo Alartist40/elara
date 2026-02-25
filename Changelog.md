@@ -2,6 +2,16 @@
 
 All notable changes to the Elara project will be documented in this file.
 
+## [2.2.1-patch] - 2026-02-25
+
+### Changed
+- **Type Hint Standardization**: Updated all type hints to use Python 3.9+ lowercase built-ins (`dict`, `list`, `tuple`) across the entire `elara_core` package while maintaining `typing.Any` for compatibility with static analysis.
+- **Constant Referencing**: Updated `DuplexVoiceHandler` to reference `MimiTTS.FRAME_SIZE` instead of a hardcoded value.
+
+### Fixed
+- **Import Cleanup**: Removed redundant and unused imports from multiple modules.
+- **Package Integrity**: Verified `__init__.py` files across all subdirectories to ensure proper package structure.
+
 ## [2.2.0-voice] - 2026-02-21
 
 ### Added

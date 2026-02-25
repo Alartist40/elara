@@ -6,8 +6,9 @@ Allows interruptions, backchanneling, and natural turn-taking.
 import asyncio
 import numpy as np
 from collections import deque
-from typing import Callable, Optional, Any
+from typing import Callable, Optional
 import logging
+from elara_core.voice.mimi_tts import MimiTTS
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,7 @@ class DuplexVoiceHandler:
         self.use_streaming = use_streaming
 
         self.sample_rate = sample_rate
-        self.frame_size = 1920  # 80ms at 24kHz, but we might need to adjust for STT
+        self.frame_size = MimiTTS.FRAME_SIZE  # 1920
 
         # State
         self.is_active = False

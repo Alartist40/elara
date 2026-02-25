@@ -4,7 +4,7 @@ Simplified ToolRouter - Only Calculator implementation.
 
 import time
 import re
-from typing import Dict, Any, List, Optional
+from typing import Optional
 
 class ToolResult:
     def __init__(self, name: str, output: str, success: bool, duration_ms: float):

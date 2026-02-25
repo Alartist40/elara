@@ -4,7 +4,7 @@ Audio utility functions for format conversion and streaming.
 
 import io
 import numpy as np
-from typing import Optional, Tuple
+from typing import Optional
 import warnings
 
 
@@ -90,7 +90,7 @@ def audio_to_wav_bytes(
 
 def wav_bytes_to_audio(
     wav_bytes: bytes,
-) -> Tuple[np.ndarray, int]:
+) -> tuple[np.ndarray, int]:
     """Convert WAV bytes to numpy array and sample rate."""
     try:
         import soundfile as sf

@@ -4,14 +4,14 @@ ToolSchema - Defines tool schemas and validates tool calls.
 
 import json
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Optional, Any
 
 
 class ToolSchema:
     """Manages tool schema definitions loaded from JSON."""
 
     def __init__(self, schema_path: Optional[str] = None):
-        self.tools: Dict[str, Dict[str, Any]] = {}
+        self.tools: dict[str, dict[str, Any]] = {}
         if schema_path:
             self.load(schema_path)
 
@@ -22,13 +22,13 @@ class ToolSchema:
         for tool in data.get("tools", []):
             self.tools[tool["name"]] = tool
 
-    def get_tool(self, name: str) -> Optional[Dict[str, Any]]:
+    def get_tool(self, name: str) -> Optional[dict[str, Any]]:
         return self.tools.get(name)
 
-    def list_tools(self) -> List[str]:
+    def list_tools(self) -> list[str]:
         return list(self.tools.keys())
 
-    def validate_params(self, name: str, params: Dict[str, Any]) -> bool:
+    def validate_params(self, name: str, params: dict[str, Any]) -> bool:
         """Validate parameters against schema."""
         tool = self.get_tool(name)
         if not tool:

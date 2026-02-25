@@ -6,7 +6,7 @@ import json
 import logging
 import functools
 from pathlib import Path
-from typing import List, Optional, Any
+from typing import Optional, Any
 
 class Tier2Engine:
     """
@@ -78,7 +78,7 @@ class Tier2Engine:
             logging.critical(f"Index rebuild failed: {e}")
             self.documents = []
 
-    def add_documents(self, texts: List[str]):
+    def add_documents(self, texts: list[str]):
         """
         Add documents to the store.
         Call this during setup, not at runtime.
@@ -119,7 +119,7 @@ class Tier2Engine:
             return emb
         self._get_cached_embedding = get_emb
 
-    def retrieve(self, query: str, k: int = 3) -> List[str]:
+    def retrieve(self, query: str, k: int = 3) -> list[str]:
         """Get top-k relevant documents."""
         if len(self.documents) == 0 or self.encoder is None:
             return []

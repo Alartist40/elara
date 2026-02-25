@@ -7,7 +7,7 @@ import yaml
 import os
 from pathlib import Path
 from dataclasses import dataclass
-from typing import Optional, Dict, List
+from typing import Optional
 import torch
 import logging
 
@@ -31,7 +31,7 @@ class VoicePersonaManager:
     def __init__(self, tts_engine, config_path: Optional[str] = None):
         self.tts = tts_engine
         self.config_path = Path(config_path or os.getenv("ELARA_PERSONA_CONFIG", "config/personas.yaml"))
-        self.personas: Dict[str, VoicePersona] = {}
+        self.personas: dict[str, VoicePersona] = {}
         self.active_persona: Optional[str] = None
 
         self._load_config()
