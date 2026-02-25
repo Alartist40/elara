@@ -1,23 +1,15 @@
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 import torch
 import numpy as np
 from elara_core.voice.mimi_tts import MimiTTS
 
 class TestMimiTTS(unittest.TestCase):
     def setUp(self):
-        # Mock the model loading to avoid heavy dependencies
-        """
-        Prepare a MimiTTS instance with a mocked model and test configuration.
-        
-        Patches moshi.models.loaders.get_mimi to return a MagicMock, assigns that mock to self.tts._model, and sets self.tts.num_codebooks to 8 so tests run without loading the real model.
-        """
-        with patch('moshi.models.loaders.get_mimi') as mock_get_mimi:
-            self.mock_model = MagicMock()
-            mock_get_mimi.return_value = self.mock_model
-            self.tts = MimiTTS()
-            self.tts._model = self.mock_model
-            self.tts.num_codebooks = 8
+        self.mock_model = MagicMock()
+        self.tts = MimiTTS()
+        self.tts._model = self.mock_model
+        self.tts.num_codebooks = 8
 
     def test_synthesize_broadcasting(self):
         # Setup voice cache with a mock embedding [1, K, 1]

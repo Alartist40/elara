@@ -120,18 +120,7 @@ class MimiTTS:
         chunk_callback: Optional[callable] = None,
     ) -> np.ndarray:
         """
-        Synthesize speech audio from input text using a cached voice embedding and simple prosodic variation.
-        
-        If the named voice is not present in the internal cache, the method attempts to load a saved embedding from the ELARA_VOICES_DIR (default data/voices); if not found, a random voice embedding is initialized and cached. The generated audio may be delivered incrementally via chunk_callback.
-        
-        Parameters:
-            text (str): Input text to synthesize.
-            voice (str): Name of the voice embedding to use (cached or loaded by name).
-            speed (float): Relative speaking speed multiplier used to estimate output duration.
-            chunk_callback (callable, optional): If provided, called repeatedly with consecutive PCM chunks (1-D NumPy arrays) of size FRAME_SIZE as they are produced.
-        
-        Returns:
-            np.ndarray: 1-D NumPy array containing the synthesized PCM audio samples.
+        Synthesize text to speech.
         """
         self._load_model()
 
