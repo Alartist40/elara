@@ -7,9 +7,9 @@ import numpy as np
 from pathlib import Path
 from typing import Union, Optional, Any
 
-from elara_core.voice.stt import WhisperSTT
+from elara_core.voice.olmo_stt import OLMoSTT
 from elara_core.voice.tts import ElaraTTS
-from elara_core.voice.mimi_tts import MimiTTS, StreamingMimiTTS
+from elara_core.voice.piper_tts import PiperTTS, StreamingPiperTTS
 
 
 class VoiceGateway:
@@ -19,47 +19,56 @@ class VoiceGateway:
 
     def __init__(
         self,
-        stt_model: str = "tiny", # Default to tiny for speed
-        tts_use_nemo: Optional[bool] = None, # Auto-detect if None
-        tts_use_mimi: bool = True, # NEW: Prefer Mimi
+        stt_model: str = "tiny",
+        tts_use_nemo: Optional[bool] = None,
+        tts_use_mimi: bool = True,  # Keep flag name for compatibility
         device: str = "auto",
     ):
         if tts_use_nemo is None:
-            # Auto-detect: use NeMo if CUDA available
             try:
                 import torch
                 tts_use_nemo = torch.cuda.is_available()
             except ImportError:
                 tts_use_nemo = False
 
-        self.stt: Optional[WhisperSTT] = None
+        self.stt: Optional[OLMoSTT] = None
         self.tts: Optional[ElaraTTS] = None
-        self._mimi_tts: Optional[MimiTTS] = None
+        self._piper_tts: Optional[PiperTTS] = None
         self.stt_model_size = stt_model
         self.tts_use_nemo = tts_use_nemo
-        self.tts_use_mimi = tts_use_mimi
+        self.tts_use_mimi = tts_use_mimi  # Controls whether to try Piper first
         self.device = device
 
-    def ensure_stt(self) -> WhisperSTT:
+    def ensure_stt(self) -> OLMoSTT:
         if self.stt is None:
-            self.stt = WhisperSTT(self.stt_model_size, self.device)
+            # Map model names to OLMoASR sizes
+            size_map = {
+                "tiny": "tiny",
+                "base": "base",
+                "small": "small",
+                "medium": "medium",
+                "large": "large",
+                "large-v2": "large-v2"
+            }
+            olmo_size = size_map.get(self.stt_model_size, "base")
+            self.stt = OLMoSTT(olmo_size, self.device)
         return self.stt
 
-    def get_mimi(self) -> Optional[MimiTTS]:
+    def get_piper(self) -> Optional[PiperTTS]:
         self.ensure_tts()
-        return self._mimi_tts
+        return self._piper_tts
 
     def ensure_tts(self) -> None:
-        if self.tts is not None or self._mimi_tts is not None:
+        if self.tts is not None or self._piper_tts is not None:
             return
 
-        # Try Mimi first
+        # Try Piper first
         if self.tts_use_mimi:
             try:
-                self._mimi_tts = StreamingMimiTTS(device=None if self.device == "auto" else self.device)
+                self._piper_tts = StreamingPiperTTS()
                 return
             except Exception as e:
-                print(f"Mimi TTS failed to load: {e}, falling back...")
+                print(f"Piper TTS failed to load: {e}, falling back...")
 
         # Fallback to existing NeMo/pyttsx3
         if self.tts is None:
@@ -77,62 +86,61 @@ class VoiceGateway:
     def speak(self, text: str, output_path: Optional[Path] = None) -> Optional[np.ndarray]:
         self.ensure_tts()
 
-        if self._mimi_tts:
-            pcm = self._mimi_tts.synthesize(text)
+        if self._piper_tts:
+            pcm = self._piper_tts.synthesize(text)
             if output_path:
-                import sphn
-                sphn.write_wav(str(output_path), pcm, self._mimi_tts.SAMPLE_RATE)
+                import soundfile as sf
+                sf.write(str(output_path), pcm, self._piper_tts.SAMPLE_RATE)
                 return None
+            # Play audio through speakers
+            try:
+                import sounddevice as sd
+                sd.play(pcm, samplerate=self._piper_tts.SAMPLE_RATE)
+                sd.wait()
+            except Exception as e:
+                print(f"Audio playback failed: {e}")
             return pcm
 
         if output_path:
             self.tts.synthesize_to_file(text, output_path)
             return None
         else:
-            return self.tts.synthesize(text)
+            pcm = self.tts.synthesize(text)
+            if pcm is not None and len(pcm) > 0:
+                try:
+                    import sounddevice as sd
+                    sd.play(pcm, samplerate=22050)
+                    sd.wait()
+                except Exception as e:
+                    print(f"Audio playback failed: {e}")
+            return pcm
 
     async def speak_streaming(self, text: str):
         """
         Provide an async stream of PCM audio frames for synthesizing the given text.
-
-        When a StreamingMimiTTS backend is active, yields chunks produced by that backend; otherwise yields fixed-size frames generated from the full synthesized PCM.
-
-        Parameters:
-            text (str): Text to synthesize.
-
-        Returns:
-            An async iterator that yields consecutive PCM audio frames suitable for real-time playback. Each yielded item is a contiguous chunk of PCM samples.
         """
         self.ensure_tts()
 
-        if isinstance(self._mimi_tts, StreamingMimiTTS):
-            async for chunk in self._mimi_tts.synthesize_streaming(text):
+        if isinstance(self._piper_tts, StreamingPiperTTS):
+            async for chunk in self._piper_tts.synthesize_streaming(text):
                 yield chunk
         else:
             # Fallback: generate all then yield in chunks
             pcm = self.speak(text)
-            frame_size = 1920
+            frame_size = PiperTTS.FRAME_SIZE
             for i in range(0, len(pcm), frame_size):
-                yield pcm[i:i+frame_size]
+                yield pcm[i:i + frame_size]
 
     def get_stats(self) -> dict[str, Any]:
         """
         Provide runtime status and configuration of the VoiceGateway instance.
-
-        Returns:
-            dict[str, Any]: Mapping of status and configuration values:
-                - stt_loaded (bool): True if the speech-to-text engine is initialized, False otherwise.
-                - tts_loaded (bool): True if any text-to-speech backend (regular TTS or Mimi) is initialized, False otherwise.
-                - stt_model (str): The configured STT model size identifier.
-                - device (str): The configured device used for models (e.g., "auto", "cpu", "cuda").
-                - tts_use_nemo (bool): True if NeMo-based TTS is configured to be used, False otherwise.
-                - tts_use_mimi (bool): True if Mimi TTS is currently loaded, False otherwise.
         """
         return {
             "stt_loaded": self.stt is not None,
-            "tts_loaded": self.tts is not None or self._mimi_tts is not None,
+            "tts_loaded": self.tts is not None or self._piper_tts is not None,
             "stt_model": self.stt_model_size,
+            "stt_backend": "OLMoASR",
             "device": self.device,
             "tts_use_nemo": self.tts_use_nemo,
-            "tts_use_mimi": self._mimi_tts is not None,
+            "tts_use_piper": self._piper_tts is not None,
         }

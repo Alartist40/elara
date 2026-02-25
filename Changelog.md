@@ -2,6 +2,44 @@
 
 All notable changes to the Elara project will be documented in this file.
 
+## [2.3.1-patch] - 2026-02-25
+
+### Fixed
+- **Piper TTS**: Rewrote `piper_tts.py` — previous version had syntax corruption. Now uses `shutil.which()` for binary detection.
+- **Voice Exports**: Updated `elara_core/voice/__init__.py` — removed stale `MimiTTS`/`WhisperSTT` exports, added `PiperTTS`, `StreamingPiperTTS`, `OLMoSTT`.
+- **Tier 1 Model Path**: Default model changed from `gemma-3-1b-it-q4_0.gguf` to `qwen-1.5b-q4.gguf` to match download script.
+- **Tier 1 Chat Format**: Auto-detects `chat_format` from model filename (`chatml` for Qwen, `gemma` for Gemma).
+- **Tier 1 get_stats()**: Fixed `TypeError` — `n_ctx` is a method in newer `llama-cpp-python`, not a property. Also derives model name from actual file path instead of hardcoded string.
+- **Audio Playback**: `VoiceGateway.speak()` now plays audio through speakers via `sounddevice` instead of silently returning a numpy array.
+- **Quick Test**: Fixed default model path in `scripts/quick_test.sh`.
+
+### Removed
+- **`elara_core/voice/stt.py`** — Old Whisper wrapper, replaced by `olmo_stt.py`.
+- **`elara_core/voice/mimi_tts.py`** — Non-functional placeholder, replaced by `piper_tts.py`.
+
+## [2.3.0] - 2026-02-25
+
+### Added
+- **STT**: Replaced OpenAI Whisper with OLMoASR (Apache 2.0, fully open source, no API keys).
+- **TTS**: Replaced broken Mimi with Piper TTS (fast, local, intelligible speech).
+- **Setup**: Unified `scripts/setup.sh` for one-command environment setup.
+- **Testing**: New `scripts/quick_test.sh` for validating all components.
+- **Model Options**: Download script now offers Qwen2.5-1.5B (no auth, default) or Gemma-3-1B.
+
+### Changed
+- **Memory**: Fixed memory check thresholds — now uses `available_gb` (2GB to load, 1GB to process, 0.5GB critical).
+- **Memory Bypasses**: Removed all `if False:` hacks that disabled memory checks in `main.py` and `tier1.py`.
+- **Model Download**: Script now uses working URLs; Qwen default requires no authentication.
+- **Voice Gateway**: Re-architected for OLMoASR STT and Piper TTS backends.
+- **Audio Output**: Sample rate changed from 24kHz (Mimi) to 22.05kHz (Piper).
+- **CLI**: `--no-tts-mimi` renamed to `--no-tts-piper`.
+
+### Removed
+- **Whisper dependency** (`openai-whisper`) — replaced by OLMoASR.
+- **Mimi/Moshi dependency** — replaced by Piper TTS.
+- **sphn dependency** — no longer needed.
+- **pyttsx3** — removed from requirements (still works as manual fallback).
+
 ## [2.2.1-patch] - 2026-02-25
 
 ### Changed
@@ -35,7 +73,7 @@ All notable changes to the Elara project will be documented in this file.
 - Missing `__init__.py` files in `tools/`, `safety/`, and `persona/` directories.
 - Refactored `DuplexVoiceHandler` to use centralized `process_input` logic for consistency.
 
-## [2.1.1-patch] - 2026-02-26
+## [2.1.1-patch] - 2026-02-22
 
 ### Fixed
 - **Tool Router Logic**: Fixed bug where tool execution caused immediate return. Tool results are now prepended to user input as context for the LLM.

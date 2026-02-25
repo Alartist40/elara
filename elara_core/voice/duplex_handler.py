@@ -8,7 +8,7 @@ import numpy as np
 from collections import deque
 from typing import Callable, Optional
 import logging
-from elara_core.voice.mimi_tts import MimiTTS
+from elara_core.voice.piper_tts import PiperTTS
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ class DuplexVoiceHandler:
         self.use_streaming = use_streaming
 
         self.sample_rate = sample_rate
-        self.frame_size = MimiTTS.FRAME_SIZE  # 1920
+        self.frame_size = PiperTTS.FRAME_SIZE  # 1024
 
         # State
         self.is_active = False

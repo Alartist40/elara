@@ -1,27 +1,24 @@
 # Credits
 
-## Elara v2.0
+## Elara v2.3
 
 ### Core Architecture
-- **CLaRa** — Continuous Latent Reasoning Architecture  
-  Based on: "CLaRa: Bridging Retrieval and Generation with Continuous Latent Reasoning" (Apple / University of Edinburgh, 2025)
-
-- **TiDAR** — Think in Diffusion, Talk in Autoregression  
-  Hybrid autoregressive + diffusion generation architecture
-
-- **TRM** — Tiny Recursive Model  
-  Inspired by Adaptive Computation Time (ACT) and Universal Transformers
+- **Multi-Tier Inference** — Dynamic routing between local execution, RAG, and API fallbacks.
+- **Qwen2.5 / Gemma 3 1B IT** — Primary local language models (Alibaba / Google).
+- **FAISS** — Efficient semantic search for RAG (Meta).
 
 ### External Components
-- **[Mistral Inference](https://github.com/mistralai/mistral-inference)** — Base language model (Apache 2.0)
-- **[OpenAI Whisper](https://github.com/openai/whisper)** — Speech-to-Text (MIT License)
-- **[NVIDIA NeMo](https://github.com/NVIDIA/NeMo)** — Text-to-Speech via FastPitch + HiFi-GAN (Apache 2.0)
+- **[llama-cpp-python](https://github.com/abetlen/llama-cpp-python)** — GGUF inference engine.
+- **[OLMoASR](https://github.com/allenai/OLMoASR)** — Speech-to-Text (Apache 2.0 License, Allen Institute for AI).
+  - Team: Huong Ngo, Matt Deitke, Martijn Bartelds, Sarah Pratt, Josh Gardner, Matt Jordan, Ludwig Schmidt.
+- **[Piper TTS](https://github.com/rhasspy/piper)** — Fast, local neural text-to-speech (MIT License, Rhasspy).
+- **[sentence-transformers](https://sbert.net/)** — Embedding models for RAG.
 
 ### Key Libraries
-- **PyTorch** — Deep learning framework
-- **safetensors** — Safe model weight serialization
-- **bitsandbytes** — Quantization support
-- **soundfile / librosa** — Audio processing
+- **PyTorch** — Deep learning framework.
+- **sounddevice / soundfile** — Real-time audio I/O and processing.
+- **faiss-cpu** — Vector similarity search.
+- **python-dotenv** — Environment management.
 
 ### Biblical Principles
 Constitutional safety principles are grounded in Scripture. See `config/biblical_principles.yaml` for the full reference with scriptural citations.

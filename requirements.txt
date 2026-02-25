@@ -1,37 +1,30 @@
-# Core inference (local models)
+# Core LLM
 llama-cpp-python>=0.3.0
 
-# ML Framework
-# Note: For ~4GB devices, use CPU-only torch to save space/memory.
-# Install with: pip install torch --index-url https://download.pytorch.org/whl/cpu
-torch>=2.1.0
-
-# Vector search (RAG)
+# RAG
 faiss-cpu>=1.8.0
 sentence-transformers>=3.0.0
 
-# API fallback
+# API (optional)
 openai>=1.0.0
 
-# Voice
-openai-whisper>=20231117
-# nemo-toolkit[all]>=2.0.0
-pyttsx3>=2.90
+# STT - OLMoASR (Apache 2.0, fully open)
+olmoasr>=0.1.0
 
-# Utilities
+# TTS - Piper (fast, local)
+piper-tts>=1.2.0
+
+# Audio processing
 numpy>=1.24.0
+soundfile>=0.12.0
+sounddevice>=0.4.0
+
+# Utils
 pydantic>=2.0.0
 pyyaml>=6.0
 tqdm>=4.65.0
 python-dotenv>=1.2.0
-soundfile>=0.12.0
 psutil>=5.9.0
 
-# Voice Extensions (PersonaPlex-inspired)
-# NOTE: MimiTTS requires 'moshi'. Install it manually from source:
-# pip install git+https://github.com/kyutai-labs/moshi.git
-# NOTE: sphn requires building Opus, which is incompatible with CMake 4.x.
-# If you see "Compatibility with CMake < 3.5 has been removed", run:
-#   pip install 'cmake<4' && CMAKE=$(which cmake) pip install sphn
-sphn>=0.1.0
-sounddevice>=0.4.0
+# Optional: For better TTS quality
+# librosa>=0.10.0  # Uncomment if needed for audio processing

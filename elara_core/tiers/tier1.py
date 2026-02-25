@@ -15,7 +15,7 @@ class Tier1Engine:
         n_threads: Optional[int] = None
     ):
         if model_path is None:
-            model_path = os.getenv("ELARA_MODEL_PATH", "models/gemma-3-1b-it-q4_0.gguf")
+            model_path = os.getenv("ELARA_MODEL_PATH", "models/qwen-1.5b-q4.gguf")
 
         if n_threads is None:
             n_threads = os.cpu_count() or 4
@@ -23,18 +23,27 @@ class Tier1Engine:
         from elara_core.utils import check_memory
         mem_status = check_memory()
         if not mem_status['can_load_model']:
-            print(f"Skipping Tier 1 load: insufficient memory ({mem_status['used_gb']:.1f}GB used)")
+            print(f"Skipping Tier 1 load: insufficient memory ({mem_status['available_gb']:.1f}GB available)")
             self.model = None
             return
 
         # llama-cpp-python handles quantization, GPU offloading
         try:
+            # Auto-detect chat format from model filename
+            model_name = os.path.basename(model_path).lower()
+            if "qwen" in model_name:
+                chat_fmt = "chatml"
+            elif "gemma" in model_name:
+                chat_fmt = "gemma"
+            else:
+                chat_fmt = "chatml"  # Safe default
+
             self.model = Llama(
                 model_path=model_path,
                 n_ctx=4096,
                 n_threads=n_threads,
-                n_gpu_layers=0,       # Set to -1 if you have GPU
-                chat_format="gemma",
+                n_gpu_layers=0,
+                chat_format=chat_fmt,
                 verbose=False,
             )
         except Exception as e:
@@ -87,9 +96,13 @@ Be concise, accurate, and helpful. If unsure, say so."""
         if self.model is None:
             return {"status": "not_loaded"}
 
+        try:
+            n_ctx_val = self.model.n_ctx() if callable(self.model.n_ctx) else self.model.n_ctx
+        except Exception:
+            n_ctx_val = 4096
+
         return {
-            "model": "gemma-3-1b-it-q4_0",
-            "ram_mb": self.model.n_ctx * 0.5,  # Rough estimate
-            "gpu_layers": self.model.n_gpu_layers,
-            "n_threads": self.model.context_params.n_threads,
+            "model": os.path.basename(self.model.model_path),
+            "ram_mb": n_ctx_val * 0.5,  # Rough estimate
+            "n_ctx": n_ctx_val,
         }

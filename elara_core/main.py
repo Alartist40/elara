@@ -18,7 +18,7 @@ def main():
     parser.add_argument("--voice", action="store_true", help="Use voice output")
     parser.add_argument("--voice-input", action="store_true", help="Use voice input (microphone)")
     parser.add_argument("--voice-streaming", action="store_true", help="Stream TTS for lower latency")
-    parser.add_argument("--no-tts-mimi", action="store_true", default=False, help="Disable Mimi neural TTS")
+    parser.add_argument("--no-tts-piper", action="store_true", default=False, help="Disable Piper neural TTS")
     parser.add_argument("--tts-nemo", action="store_true", default=None, help="Force NeMo TTS (requires GPU)")
     parser.add_argument("--tts-cpu", action="store_true", help="Force CPU TTS (pyttsx3)")
     parser.add_argument("--voice-debug", action="store_true", help="Print which TTS engine is active")
@@ -41,10 +41,10 @@ def main():
 
     # Pre-flight memory check
     mem_status = check_memory()
-    if not mem_status['can_load_model']:
-        print(f"CRITICAL: Memory too low to start ({mem_status['used_gb']:.1f}GB used).")
-        if not args.interactive: # Exit if single-shot
-             sys.exit(1)
+    if mem_status['status'] == 'critical':
+        print(f"CRITICAL: Memory too low to start ({mem_status['available_gb']:.1f}GB available).")
+        if not args.interactive:
+            sys.exit(1)
 
     tier1 = Tier1Engine()
     tier2 = Tier2Engine(tier1)
@@ -63,13 +63,13 @@ def main():
         check_memory()
 
     voice = VoiceGateway(
-        tts_use_mimi=not (args.no_tts_mimi or args.tts_nemo or args.tts_cpu),
+        tts_use_mimi=not (args.no_tts_piper or args.tts_nemo or args.tts_cpu),
         tts_use_nemo=args.tts_nemo,
     )
 
     if args.voice_debug:
         stats = voice.get_stats()
-        engine = "Mimi (Neural)" if stats['tts_use_mimi'] else ("NeMo" if stats['tts_use_nemo'] else "CPU (pyttsx3)")
+        engine = "Piper (Neural)" if stats['tts_use_piper'] else ("NeMo" if stats['tts_use_nemo'] else "CPU (pyttsx3)")
         print(f"[VOICE DEBUG] Active TTS Engine: {engine}")
 
     safety = SafetyFilter()
@@ -109,9 +109,9 @@ async def voice_conversation_mode(args, tier1, tier2, tier3, router, safety, too
     from elara_core.persona.voice_persona import VoicePersonaManager
     from elara_core.voice.recorder import VoiceRecorder
 
-    tts_engine = voice.get_mimi()
+    tts_engine = voice.get_piper()
     if tts_engine is None:
-        print("Error: Mimi TTS not available. Install 'moshi' or disable --voice-input.")
+        print("Error: Piper TTS not available. Install 'piper-tts' or disable --voice-input.")
         return
 
     try:
@@ -151,7 +151,7 @@ async def voice_conversation_mode(args, tier1, tier2, tier3, router, safety, too
     try:
         import sounddevice as sd
         # Use OutputStream for gapless playback
-        audio_stream = sd.OutputStream(samplerate=24000, channels=1, dtype='float32')
+        audio_stream = sd.OutputStream(samplerate=22050, channels=1, dtype='float32')
         audio_stream.start()
     except Exception as e:
         print(f"Audio output not available: {e}")
@@ -215,7 +215,7 @@ def process_input(user_input, tier1, tier2, tier3, router, safety, tools, system
     # 0. Memory Check
     from elara_core.utils import check_memory
     mem_status = check_memory()
-    if not mem_status['can_process_request']:
+    if mem_status['status'] == 'critical':
         return "Error: System memory is critically low. Please try again later or restart the application."
 
     # 1. Safety Pre-check: Thread cleaned input through the pipeline
