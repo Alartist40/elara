@@ -9,9 +9,10 @@ All notable changes to the Elara project will be documented in this file.
 - **Constant Referencing**: Updated `DuplexVoiceHandler` to reference `MimiTTS.FRAME_SIZE` instead of a hardcoded value.
 
 ### Fixed
-- **Import Cleanup**: Removed redundant and unused imports from multiple modules.
+- **Import Cleanup**: Removed redundant and unused imports from multiple modules (including addressing review feedback on `Optional` imports).
 - **Package Integrity**: Verified `__init__.py` files across all subdirectories to ensure proper package structure.
 - **Documentation**: Added comprehensive docstrings to core modules and methods across the `elara_core` package.
+- **Formatting**: Corrected section spacing in `Changelog.md` to follow standard Markdown conventions.
 
 ## [2.2.1-perf] - 2026-02-25
 
