@@ -120,7 +120,18 @@ class MimiTTS:
         chunk_callback: Optional[callable] = None,
     ) -> np.ndarray:
         """
-        Synthesize text to speech.
+        Synthesize the given text into a waveform conditioned on a voice embedding.
+        
+        Generates a prosodic code sequence from the input text, combines it with a cached or newly initialized voice embedding, decodes the resulting codes into PCM audio, optionally streams the audio in fixed-size chunks via a callback, and returns the full waveform.
+        
+        Parameters:
+            text (str): Input text to synthesize.
+            voice (str): Name of the voice conditioning to use; if not cached, attempts to load from ELARA_VOICES_DIR or creates a random embedding.
+            speed (float): Playback speed multiplier used when estimating duration.
+            chunk_callback (Optional[callable]): If provided, called repeatedly with consecutive chunks of the output PCM of length FRAME_SIZE.
+        
+        Returns:
+            np.ndarray: 1-D NumPy array of PCM samples (sample rate SAMPLE_RATE) containing the complete synthesized waveform.
         """
         self._load_model()
 

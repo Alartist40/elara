@@ -7,6 +7,11 @@ from elara_core.voice.mimi_tts import MimiTTS
 class TestMimiTTS(unittest.TestCase):
     def setUp(self):
         # Mock the model loading to avoid heavy dependencies
+        """
+        Prepare a MimiTTS instance for tests by patching model loading and injecting a mocked model.
+        
+        Patches moshi.models.loaders.get_mimi to return a MagicMock, assigns that mock to self.tts._model, and configures self.tts.num_codebooks to 8 so tests run without loading the real model.
+        """
         with patch('moshi.models.loaders.get_mimi') as mock_get_mimi:
             self.mock_model = MagicMock()
             mock_get_mimi.return_value = self.mock_model
@@ -16,6 +21,11 @@ class TestMimiTTS(unittest.TestCase):
 
     def test_synthesize_broadcasting(self):
         # Setup voice cache with a mock embedding [1, K, 1]
+        """
+        Verifies that synthesize broadcasts a voice embedding across codebooks and produces code tensors with the expected shape and a NumPy PCM output.
+        
+        Sets a voice embedding shaped (1, K, 1), mocks internal frame/prosody estimation to produce (1, K, frames), and stubs the model decode result. Asserts that the model.decode input has shape (1, num_codebooks, frames) and that the returned PCM is a numpy.ndarray.
+        """
         self.tts._voice_cache['test'] = torch.randn(1, 8, 1)
 
         # Mock _estimate_frames and _generate_prosody
