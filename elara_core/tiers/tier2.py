@@ -63,7 +63,7 @@ class Tier2Engine:
     def _rebuild_index(self):
         """
         Rebuilds the FAISS index and internal document list from the JSON file at self.docs_path.
-        
+
         If the JSON file contains no documents, clears the internal documents list and leaves the index empty. On error while reading or rebuilding, clears the internal documents list and logs a critical error.
         """
         try:
@@ -85,12 +85,15 @@ class Tier2Engine:
     def add_documents(self, texts: list[str]):
         """
         Add the given texts to the FAISS-backed document store and persist the updated index and document list to disk.
-        
+
         Each text is encoded into an embedding, normalized for cosine similarity, appended to the in-memory FAISS index and documents list, and then both the index file and documents JSON are written to their configured paths.
-        
+
         Parameters:
             texts (list[str]): Documents to add to the store.
-        
+
+        Note:
+            Call this during setup, not at runtime.
+
         Raises:
             RuntimeError: If the encoder is not loaded.
         """
@@ -120,20 +123,20 @@ class Tier2Engine:
     def _setup_cache(self):
         """
         Create and attach an instance-scoped cached query-to-embedding function.
-        
-        Sets self._get_cached_embedding to an LRU-cached callable that accepts a query string and returns a normalized float32 NumPy embedding suitable for cosine-similarity searches, or `None` if the encoder is not available. The cache holds up to 128 entries.
+
+        Sets self._get_cached_embedding to an LRU-cached callable that accepts a query string and returns a normalized float32 NumPy embedding suitable for cosine-similarity searches, or None if the encoder is not available. The cache holds up to 128 entries.
         """
         encoder = self.encoder
         @functools.lru_cache(maxsize=128)
         def get_emb(query: str):
             """
             Encode a text query and return its L2-normalized embedding using the configured encoder.
-            
+
             Parameters:
                 query (str): Text to be embedded.
-            
+
             Returns:
-                numpy.ndarray | None: The normalized float32 embedding for `query`, or `None` if no encoder is available.
+                numpy.ndarray | None: The normalized float32 embedding for query, or None if no encoder is available.
             """
             if encoder is None:
                 return None
@@ -146,9 +149,9 @@ class Tier2Engine:
     def retrieve(self, query: str, k: int = 3) -> list[str]:
         """
         Retrieve the most relevant documents for a query using the FAISS index.
-        
+
         Returns:
-            list[str]: Up to `k` documents ranked by relevance. Returns an empty list if there are no stored documents, the encoder is unavailable, or the query cannot be embedded.
+            list[str]: Up to k documents ranked by relevance. Returns an empty list if there are no stored documents, the encoder is unavailable, or the query cannot be embedded.
         """
         if len(self.documents) == 0 or self.encoder is None:
             return []

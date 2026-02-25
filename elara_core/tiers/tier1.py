@@ -47,12 +47,12 @@ Be concise, accurate, and helpful. If unsure, say so."""
     def generate(self, prompt: str, max_tokens: int = 256, system_prompt: Optional[str] = None) -> str:
         """
         Generate a chat response from the loaded Gemma model using the given prompt and optional system prompt.
-        
+
         Parameters:
             prompt (str): The user's prompt to send to the model.
             max_tokens (int): Maximum number of tokens the model may generate.
             system_prompt (Optional[str]): Optional system message to override the default system prompt.
-        
+
         Returns:
             str: The model's reply text with surrounding whitespace trimmed; if the model is not loaded, returns "Error: Tier 1 model not loaded."
         """
@@ -75,8 +75,8 @@ Be concise, accurate, and helpful. If unsure, say so."""
 
     def get_stats(self) -> dict[str, Any]:
         """
-        Return runtime statistics for the loaded Tier1 model or indicate that no model is loaded.
-        
+        Return runtime statistics for the loaded Tier 1 model or indicate that no model is loaded.
+
         Returns:
             dict[str, Any]: If the model is not loaded, returns {"status": "not_loaded"}. Otherwise returns a dictionary with:
                 - "model" (str): Model identifier.

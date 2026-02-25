@@ -51,8 +51,7 @@ class TestEngines(unittest.TestCase):
         # Happy path
         res = tr.execute("calculate 2+2")
         self.assertTrue(res.success)
-        # Accept both 4 and 4.0 depending on simpleeval version
-        self.assertIn(res.output, ["4", "4.0"])
+        self.assertEqual(res.output, "4")
 
         # Floating point math
         res_float = tr.execute("calculate 10 / 3")

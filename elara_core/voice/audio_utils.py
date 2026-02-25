@@ -93,7 +93,7 @@ def wav_bytes_to_audio(
 ) -> tuple[np.ndarray, int]:
     """
     Convert WAV-encoded bytes into a NumPy float32 audio array and its sample rate.
-    
+
     Returns:
         audio (np.ndarray): Audio samples as a float32 array. Shape is (n,) for mono or (n, channels) for multi-channel.
         sr (int): Sample rate in Hertz.

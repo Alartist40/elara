@@ -11,14 +11,7 @@ All notable changes to the Elara project will be documented in this file.
 ### Fixed
 - **Import Cleanup**: Removed redundant and unused imports from multiple modules.
 - **Package Integrity**: Verified `__init__.py` files across all subdirectories to ensure proper package structure.
-## [2.2.1-perf] - 2026-02-25
-
-### Added
-- **MimiTTS Test Suite**: Added `tests/test_mimi_tts.py` for comprehensive validation of neural synthesis.
-
-### Changed
-- **MimiTTS Optimization**: Replaced `.repeat()` with PyTorch broadcasting in `synthesize` for ~30-50% faster tensor operations and lower memory overhead.
-- **Calculator Compatibility**: Updated functional tests to handle both integer and float results, ensuring compatibility across `simpleeval` versions.
+- **Documentation**: Added comprehensive docstrings to core modules and methods across the `elara_core` package.
 
 ## [2.2.0-voice] - 2026-02-21
 

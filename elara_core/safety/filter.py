@@ -11,9 +11,9 @@ class SafetyFilter:
     def __init__(self, rules_path: str = ""):
         """
         Initialize the SafetyFilter by loading rules from a YAML file and compiling regex patterns.
-        
+
         If a non-empty `rules_path` is provided it is used; otherwise the module-local "rules.yaml" is used. If the rules file is missing or cannot be parsed, the filter falls back to an empty rules set {"block": [], "flag": []} (a warning or error is logged respectively). Loaded rules are expected to contain "block" entries with "pattern" and "reason", and "flag" entries with "pattern" and "replacement". Compiles `block_patterns` as (compiled_regex, reason) and `flag_patterns` as (compiled_regex, replacement) using case-insensitive matching.
-        
+
         Parameters:
             rules_path (str): Optional path to a YAML rules file; when empty the default "rules.yaml" next to this module is used.
         """
@@ -46,9 +46,9 @@ class SafetyFilter:
     def check(self, text: str) -> tuple[bool, str]:
         """
         Check text against configured block and flag rules and return whether it is allowed plus either a block reason or the cleaned text.
-        
+
         Returns:
-            (allowed, reason_or_cleaned_text) — `allowed` is `True` if no block patterns match the text after flag substitutions, `False` if a block pattern matches; when `False`, `reason_or_cleaned_text` is the block reason prefixed with "Blocked: "; when `True`, it is the cleaned text with flag substitutions applied.
+            tuple[bool, str]: A tuple (allowed, reason_or_cleaned_text) — `allowed` is True if no block patterns match the text after flag substitutions, False if a block pattern matches; when False, `reason_or_cleaned_text` is the block reason prefixed with "Blocked: "; when True, it is the cleaned text with flag substitutions applied.
         """
         # 1. Check original text
         for pattern, reason in self.block_patterns:
