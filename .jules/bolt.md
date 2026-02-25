@@ -9,3 +9,7 @@
 ## 2025-01-31 - Redundant computations in generator expressions
 **Learning:** Calling a string manipulation method like `.lower()` inside a generator expression passed to `any()` or `all()` can result in that method being called multiple times (once for each iteration until short-circuit).
 **Action:** Always hoist common computations (like lowercasing the search target) outside of the generator expression to ensure they are performed only once.
+
+## 2026-02-25 - PyTorch Broadcasting over Explicit Repeating
+**Learning:** Using `.repeat()` to expand a conditioning tensor (e.g., a voice embedding) to match the sequence length of another tensor (e.g., prosody) is inefficient. PyTorch's broadcasting mechanism handles this automatically during arithmetic operations without allocating a large intermediate tensor.
+**Action:** Prefer broadcasting for expanding tensors along singleton dimensions to save memory and CPU cycles.
