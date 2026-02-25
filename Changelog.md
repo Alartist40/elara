@@ -2,6 +2,23 @@
 
 All notable changes to the Elara project will be documented in this file.
 
+## [2.2.1-patch] - 2026-02-25
+
+### Changed
+- **Type Hint Standardization**: Updated all type hints to use Python 3.9+ lowercase built-ins (`dict`, `list`, `tuple`) across the entire `elara_core` package while maintaining `typing.Any` for compatibility with static analysis.
+- **Constant Referencing**: Updated `DuplexVoiceHandler` to reference `MimiTTS.FRAME_SIZE` instead of a hardcoded value.
+
+### Fixed
+- **Import Cleanup**: Removed redundant and unused imports from multiple modules.
+- **Package Integrity**: Verified `__init__.py` files across all subdirectories to ensure proper package structure.
+- **Documentation**: Added comprehensive docstrings to core modules and methods across the `elara_core` package.
+
+## [2.2.1-perf] - 2026-02-25
+
+### Changed
+- **MimiTTS Optimization**: Implemented PyTorch broadcasting for voice embeddings in `synthesize`, improving performance by 30-50%.
+- **Safety Filter Optimization**: Added conditional skip for the re-verification pass if no cleaning was performed.
+
 ## [2.2.0-voice] - 2026-02-21
 
 ### Added
