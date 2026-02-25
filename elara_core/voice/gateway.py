@@ -5,7 +5,7 @@ Optimized for lazy loading.
 
 import numpy as np
 from pathlib import Path
-from typing import Union, Optional, Dict, Any
+from typing import Union, Optional, Any
 
 from elara_core.voice.stt import WhisperSTT
 from elara_core.voice.tts import ElaraTTS
@@ -92,7 +92,17 @@ class VoiceGateway:
             return self.tts.synthesize(text)
 
     async def speak_streaming(self, text: str):
-        """Streaming TTS for real-time playback."""
+        """
+        Provide an async stream of PCM audio frames for synthesizing the given text.
+
+        When a StreamingMimiTTS backend is active, yields chunks produced by that backend; otherwise yields fixed-size frames generated from the full synthesized PCM.
+
+        Parameters:
+            text (str): Text to synthesize.
+
+        Returns:
+            An async iterator that yields consecutive PCM audio frames suitable for real-time playback. Each yielded item is a contiguous chunk of PCM samples.
+        """
         self.ensure_tts()
 
         if isinstance(self._mimi_tts, StreamingMimiTTS):
@@ -105,7 +115,19 @@ class VoiceGateway:
             for i in range(0, len(pcm), frame_size):
                 yield pcm[i:i+frame_size]
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
+        """
+        Provide runtime status and configuration of the VoiceGateway instance.
+
+        Returns:
+            dict[str, Any]: Mapping of status and configuration values:
+                - stt_loaded (bool): True if the speech-to-text engine is initialized, False otherwise.
+                - tts_loaded (bool): True if any text-to-speech backend (regular TTS or Mimi) is initialized, False otherwise.
+                - stt_model (str): The configured STT model size identifier.
+                - device (str): The configured device used for models (e.g., "auto", "cpu", "cuda").
+                - tts_use_nemo (bool): True if NeMo-based TTS is configured to be used, False otherwise.
+                - tts_use_mimi (bool): True if Mimi TTS is currently loaded, False otherwise.
+        """
         return {
             "stt_loaded": self.stt is not None,
             "tts_loaded": self.tts is not None or self._mimi_tts is not None,
